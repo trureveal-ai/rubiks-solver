@@ -5,7 +5,7 @@ import {
   generateScramble, applyMoveString, replayToCube,
 } from "./engine/cube.js";
 import { validateCube } from "./engine/validate.js";
-import { initKociemba, solveKociemba, terminateKociemba } from "./engine/kociemba.js";
+import { initKociemba, cubeToKociemba, terminateKociemba } from "./engine/kociemba.js";
 import Cell from "./components/Cell.jsx";
 import FlatFace from "./components/FlatFace.jsx";
 import Cube3D from "./components/Cube3D.jsx";
@@ -122,9 +122,29 @@ export default function App() {
     console.log('[App] handleSolveKociemba START');
     setPhase("solving");setErr("");
     try {
-      console.log('[App] awaiting solveKociemba...');
-      const solutionStr=await solveKociemba(cube);
-      console.log('[App] solveKociemba resolved, solutionStr:', solutionStr);
+      const facelets=cubeToKociemba(cube);
+      console.log('[App] spawning solve worker...');
+      const solutionStr=await new Promise((resolve,reject)=>{
+        const worker=new Worker(new URL('./engine/solve.worker.js',import.meta.url),{type:'module'});
+        console.log('[App] worker object created:', worker);
+        worker.onmessage=({data})=>{
+          console.log('[App] worker message received:', data);
+          worker.terminate();
+          if(data.type==='solution') resolve(data.moves);
+          else reject(new Error(data.message||'Worker error'));
+        };
+        worker.onmessageerror=e=>{
+          console.error('[App] worker message error (deserialization?):', e);
+          worker.terminate();reject(new Error('Worker message error'));
+        };
+        worker.onerror=e=>{
+          console.error('[App] worker onerror:', e.message, e.filename, e.lineno, e);
+          worker.terminate();reject(e);
+        };
+        console.log('[App] posting solve message, facelets length:', facelets.length);
+        worker.postMessage({type:'solve',facelets});
+      });
+      console.log('[App] solve worker resolved, solutionStr:', solutionStr);
       const moves=solutionStr?solutionStr.trim().split(/\s+/).filter(Boolean):[];
 
       if(moves.length===0){
@@ -360,6 +380,16 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
             </button>
             <button onClick={solve} disabled={!canSolve||(solveMode==="optimal"&&kStatus!=="ready")} style={{background:(!canSolve||(solveMode==="optimal"&&kStatus!=="ready"))?"#0d0d18":"linear-gradient(135deg,#E65100,#FFD600)",border:(!canSolve||(solveMode==="optimal"&&kStatus!=="ready"))?"1px solid #1a1a2e":"none",borderRadius:8,padding:"14px 34px",color:(!canSolve||(solveMode==="optimal"&&kStatus!=="ready"))?"#333":"#000",fontFamily:"'Courier New',monospace",fontWeight:900,fontSize:"1rem",letterSpacing:4,cursor:"pointer",transition:"all .2s"}}>▶ SOLVE</button>
             <button onClick={reset} disabled={busy} style={{background:"transparent",border:"1px solid #1a1a2e",borderRadius:8,padding:"14px 18px",color:"#444",fontFamily:"'Courier New',monospace",fontSize:9,letterSpacing:3,cursor:"pointer"}}>RESET</button>
+          </div>
+          <div style={{display:"flex",gap:6,marginTop:10,justifyContent:"center",flexWrap:"wrap"}}>
+            {['U','D','F','B','R','L'].map(m=>(
+              <button key={m} onClick={()=>{
+                const after=MOVE_FN[m](initCube());
+                console.log(`[debug] ${m} move on solved cube → facelets: ${cubeToKociemba(after)}`);
+              }} style={{background:"#0d0d18",border:"1px solid #333",borderRadius:6,padding:"6px 10px",color:"#aaa",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
+                dbg {m}
+              </button>
+            ))}
           </div>
         </div>
       )}

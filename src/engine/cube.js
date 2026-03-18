@@ -29,6 +29,7 @@ export function copyCube(c) {
 }
 
 function rcw(f) { return [f[6],f[3],f[0],f[7],f[4],f[1],f[8],f[5],f[2]]; }
+function rccw(f) { return [f[2],f[5],f[8],f[1],f[4],f[7],f[0],f[3],f[6]]; }
 
 function applyU(cube) {
   const c=copyCube(cube); c.U=rcw(cube.U);
@@ -49,7 +50,7 @@ function applyF(cube) {
   return c;
 }
 function applyB(cube) {
-  const c=copyCube(cube); c.B=rcw(cube.B);
+  const c=copyCube(cube); c.B=rccw(cube.B);
   c.U[0]=cube.R[2];c.U[1]=cube.R[5];c.U[2]=cube.R[8];
   c.L[0]=cube.U[2];c.L[3]=cube.U[1];c.L[6]=cube.U[0];
   c.D[6]=cube.L[0];c.D[7]=cube.L[3];c.D[8]=cube.L[6];

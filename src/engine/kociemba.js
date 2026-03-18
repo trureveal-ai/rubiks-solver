@@ -207,7 +207,7 @@ function permutationIndex(context,start,end,fromEnd=false) {
       } else {
         for (let j=0;j<=maxAll;j++) { if (perm[j]>=start&&perm[j]<=end) { a+=Cnk(j,x+1); our[x]=perm[j]; x++; } }
       }
-      for (let j=maxOur;j>=0;j--) { let k=0; while(our[j]!==start+j) { rotateLeft(our,0,j); k++; } b=(j+1)*b+k; }
+      for (let j=maxOur;j>=0;j--) { let k=0; while(our[j]!==start+j) { rotateLeft(our,0,j); k++; if (k>j) break; } b=(j+1)*b+k; }
       return a*maxB+b;
     }
   };
@@ -378,6 +378,7 @@ Cube.initSolver = function() { Cube.computeMoveTables(); Cube.computePruningTabl
 
 // ─── IDA* solver ─────────────────────────────────────────────────────────────
 Cube.prototype.solveUpright = function(maxDepth=22) {
+  console.log('[kociemba] solveUpright entry, maxDepth=', maxDepth);
   const faceName=['U','R','F','D','L','B'];
   const powerName=['','2',"'"];
   const moveNames=[];
@@ -389,10 +390,15 @@ Cube.prototype.solveUpright = function(maxDepth=22) {
   class State {
     constructor() { this.parent=null; this.lastMove=null; this.depth=0; }
     initFrom(cube) {
-      this.flip=cube.flip(); this.twist=cube.twist();
-      this.slice=cube.FRtoBR()/N_SLICE2|0;
-      this.parity=cube.cornerParity(); this.URFtoDLF=cube.URFtoDLF();
-      this.FRtoBR=cube.FRtoBR(); this.URtoUL=cube.URtoUL(); this.UBtoDF=cube.UBtoDF();
+      console.log('[initFrom] ep=',JSON.stringify(cube.ep),'cp=',JSON.stringify(cube.cp));
+      this.flip=cube.flip();       console.log('[initFrom] flip done:',this.flip);
+      this.twist=cube.twist();     console.log('[initFrom] twist done:',this.twist);
+      this.slice=cube.FRtoBR()/N_SLICE2|0; console.log('[initFrom] slice done:',this.slice);
+      this.parity=cube.cornerParity(); console.log('[initFrom] parity done:',this.parity);
+      this.URFtoDLF=cube.URFtoDLF(); console.log('[initFrom] URFtoDLF done:',this.URFtoDLF);
+      this.FRtoBR=cube.FRtoBR();   console.log('[initFrom] FRtoBR done:',this.FRtoBR);
+      this.URtoUL=cube.URtoUL();   console.log('[initFrom] URtoUL done:',this.URtoUL);
+      this.UBtoDF=cube.UBtoDF();   console.log('[initFrom] UBtoDF done:',this.UBtoDF);
       return this;
     }
     solution() { return this.parent ? this.parent.solution()+moveNames[this.lastMove]+' ' : ''; }
@@ -430,20 +436,10 @@ Cube.prototype.solveUpright = function(maxDepth=22) {
     }
   }
 
+  console.log('[kociemba] allocating', maxDepth+2, 'states...');
   for (let x=0;x<=maxDepth+1;x++) freeStates.push(new State);
+  console.log('[kociemba] states allocated, calling initFrom...');
 
-  function phase1(state,depth) {
-    if (depth===0) {
-      if (state.minDist1()===0) {
-        if (state.lastMove===null||!allMoves2.includes(state.lastMove)) phase2search(state);
-      }
-    } else if (state.minDist1()<=depth) {
-      for (const move of state.moves1()) {
-        const next=state.next1(move); phase1(next,depth-1); freeStates.push(next);
-        if (solution!==null) return;
-      }
-    }
-  }
   function phase2search(state) {
     state.init2();
     for (let depth=1;depth<=maxDepth-state.depth;depth++) {
@@ -460,8 +456,31 @@ Cube.prototype.solveUpright = function(maxDepth=22) {
     }
   }
 
+  let iters=0;
+  const MAX_ITERS=5_000_000;
+
+  function phase1(state,depth) {
+    if (++iters%100_000===0) console.log(`[kociemba] phase1 iters=${iters} depth=${depth}`);
+    if (iters>MAX_ITERS) throw new Error(`[kociemba] aborted after ${MAX_ITERS} iterations`);
+    if (depth===0) {
+      if (state.minDist1()===0) {
+        if (state.lastMove===null||!allMoves2.includes(state.lastMove)) phase2search(state);
+      }
+    } else if (state.minDist1()<=depth) {
+      for (const move of state.moves1()) {
+        const next=state.next1(move); phase1(next,depth-1); freeStates.push(next);
+        if (solution!==null) return;
+      }
+    }
+  }
+
   const root=freeStates.pop().initFrom(this);
-  for (let depth=1;depth<=maxDepth;depth++) { phase1(root,depth); if (solution!==null) break; }
+  console.log('[kociemba] initFrom done, root.flip=', root.flip, 'root.twist=', root.twist, 'root.FRtoBR=', root.FRtoBR);
+  console.log(`[kociemba] starting IDA* — minDist1=${root.minDist1()} flip=${root.flip} twist=${root.twist} slice=${root.slice}`);
+  for (let depth=1;depth<=maxDepth;depth++) {
+    console.log(`[kociemba] trying depth=${depth}`);
+    phase1(root,depth); if (solution!==null) break;
+  }
   freeStates.push(root);
   return solution ? solution.trimEnd() : '';
 };
@@ -470,9 +489,13 @@ const solveFaceNums={U:0,R:1,F:2,D:3,L:4,B:5};
 const solveFaceNames={0:'U',1:'R',2:'F',3:'D',4:'L',5:'B'};
 
 Cube.prototype.solve = function(maxDepth=22) {
+  console.log('[kociemba] solve() entry');
   const clone=this.clone(), upright=clone.upright();
+  console.log('[kociemba] upright=', JSON.stringify(upright));
   clone.move(upright);
+  console.log('[kociemba] clone.move(upright) done');
   const rotation=new Cube().move(upright).center;
+  console.log('[kociemba] rotation=', JSON.stringify(rotation));
   const uprightSol=clone.solveUpright(maxDepth);
   return uprightSol.split(' ').filter(Boolean).map(move=>{
     return solveFaceNames[rotation[solveFaceNums[move[0]]]]+(move.length>1?move[1]:'');
@@ -505,6 +528,20 @@ export function solveKociemba(cube) {
       resolve(c.isSolved() ? '' : c.solve());
     } catch(err) { reject(err); }
   });
+}
+
+// Used by solve.worker.js — synchronous, called after Cube.initSolver()
+export function solveFromFacelets(facelets) {
+  console.log('[kociemba] solveFromFacelets entry, facelets.length=', facelets.length);
+  const c=Cube.fromString(facelets);
+  console.log('[kociemba] fromString done, ep[0]=', c.ep[0], 'co[0]=', c.co[0]);
+  const solved=c.isSolved();
+  console.log('[kociemba] isSolved=', solved);
+  if (solved) return '';
+  console.log('[kociemba] calling c.solve()...');
+  const result=c.solve();
+  console.log('[kociemba] c.solve() returned:', result);
+  return result;
 }
 
 export function terminateKociemba() {}
