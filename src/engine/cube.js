@@ -33,12 +33,12 @@ function rccw(f) { return [f[2],f[5],f[8],f[1],f[4],f[7],f[0],f[3],f[6]]; }
 
 function applyU(cube) {
   const c=copyCube(cube); c.U=rcw(cube.U);
-  [0,1,2].forEach(i=>{c.F[i]=cube.L[i];c.R[i]=cube.F[i];c.B[i]=cube.R[i];c.L[i]=cube.B[i];});
+  [0,1,2].forEach(i=>{c.L[i]=cube.F[i];c.B[i]=cube.L[i];c.R[i]=cube.B[i];c.F[i]=cube.R[i];});
   return c;
 }
 function applyD(cube) {
   const c=copyCube(cube); c.D=rcw(cube.D);
-  [6,7,8].forEach(i=>{c.F[i]=cube.R[i];c.L[i]=cube.F[i];c.B[i]=cube.L[i];c.R[i]=cube.B[i];});
+  [6,7,8].forEach(i=>{c.F[i]=cube.L[i];c.R[i]=cube.F[i];c.B[i]=cube.R[i];c.L[i]=cube.B[i];});
   return c;
 }
 function applyF(cube) {
@@ -50,7 +50,7 @@ function applyF(cube) {
   return c;
 }
 function applyB(cube) {
-  const c=copyCube(cube); c.B=rccw(cube.B);
+  const c=copyCube(cube); c.B=rcw(cube.B);
   c.U[0]=cube.R[2];c.U[1]=cube.R[5];c.U[2]=cube.R[8];
   c.L[0]=cube.U[2];c.L[3]=cube.U[1];c.L[6]=cube.U[0];
   c.D[6]=cube.L[0];c.D[7]=cube.L[3];c.D[8]=cube.L[6];
@@ -59,10 +59,10 @@ function applyB(cube) {
 }
 function applyR(cube) {
   const c=copyCube(cube); c.R=rcw(cube.R);
-  c.F[2]=cube.U[2];c.F[5]=cube.U[5];c.F[8]=cube.U[8];
-  c.D[2]=cube.F[2];c.D[5]=cube.F[5];c.D[8]=cube.F[8];
-  c.B[0]=cube.D[8];c.B[3]=cube.D[5];c.B[6]=cube.D[2];
-  c.U[2]=cube.B[6];c.U[5]=cube.B[3];c.U[8]=cube.B[0];
+  c.U[2]=cube.F[2];c.U[5]=cube.F[5];c.U[8]=cube.F[8];
+  c.B[0]=cube.U[8];c.B[3]=cube.U[5];c.B[6]=cube.U[2];
+  c.D[8]=cube.B[0];c.D[5]=cube.B[3];c.D[2]=cube.B[6];
+  c.F[2]=cube.D[2];c.F[5]=cube.D[5];c.F[8]=cube.D[8];
   return c;
 }
 function applyL(cube) {

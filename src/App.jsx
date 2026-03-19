@@ -5,7 +5,7 @@ import {
   generateScramble, applyMoveString, replayToCube,
 } from "./engine/cube.js";
 import { validateCube } from "./engine/validate.js";
-import { initKociemba, cubeToKociemba, terminateKociemba } from "./engine/kociemba.js";
+import { initKociemba, cubeToKociemba, terminateKociemba, KociembaCube } from "./engine/kociemba.js";
 import Cell from "./components/Cell.jsx";
 import FlatFace from "./components/FlatFace.jsx";
 import Cube3D from "./components/Cube3D.jsx";
@@ -122,6 +122,7 @@ export default function App() {
     console.log('[App] handleSolveKociemba START');
     setPhase("solving");setErr("");
     try {
+      console.log('[App] raw cube →', JSON.stringify(cube));
       const facelets=cubeToKociemba(cube);
       console.log('[App] spawning solve worker...');
       const solutionStr=await new Promise((resolve,reject)=>{
@@ -390,6 +391,18 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
                 dbg {m}
               </button>
             ))}
+            <button onClick={()=>{
+              const seq=["D","R","L","D","R2","B","L2","D"];
+              let c=initCube();
+              for(const m of seq){
+                c=MOVE_FN[m](c);
+                const facelets=cubeToKociemba(c);
+                const kc=KociembaCube.fromString(facelets);
+                console.log(`[debug] after ${m}: ep=[${kc.ep.join(',')}]`);
+              }
+            }} style={{background:"#0d0d18",border:"1px solid #C62828",borderRadius:6,padding:"6px 10px",color:"#C62828",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
+              dbg seq
+            </button>
           </div>
         </div>
       )}

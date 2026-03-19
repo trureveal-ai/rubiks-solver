@@ -95,6 +95,13 @@ class Cube {
         if (str[edgeFacelet[i][0]]===edgeColor[j][1]&&str[edgeFacelet[i][1]]===edgeColor[j][0]) { cube.ep[i]=j; cube.eo[i]=1; break; }
       }
     }
+    const seen = new Set();
+    for (let i=0;i<12;i++) {
+      if (cube.ep[i]===undefined || seen.has(cube.ep[i])) {
+        console.error('[fromString] CORRUPT ep at i='+i+' val='+cube.ep[i]+' full='+JSON.stringify(cube.ep)+' facelets='+str);
+      }
+      seen.add(cube.ep[i]);
+    }
     return cube;
   }
 
@@ -510,6 +517,7 @@ function cubeToFacelets(cube) {
 }
 
 export function cubeToKociemba(cube) { return cubeToFacelets(cube); }
+export { Cube as KociembaCube };
 
 export function initKociemba(setStatus) {
   setStatus('initializing');
