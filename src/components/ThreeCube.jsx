@@ -183,9 +183,22 @@ function CubeScene({ stickerMap, animating, onDone }) {
 // ── Public component ─────────────────────────────────────────────────────────
 const TEST_MOVES = ["U", "R", "F", "D", "L", "B"];
 
-export default function ThreeCube({ cube, width = 340, height = 340, onAnimationDone }) {
+export default function ThreeCube({ cube, width = 340, height = 340, animTrigger, onAnimationDone }) {
   const stickerMap = useMemo(() => buildStickerMap(cube), [cube]);
   const [animating, setAnimating] = useState(null);
+
+  // External trigger: parent sets animTrigger={move, key} to kick off an animation.
+  // key must change each call (even for repeated moves) so the effect fires.
+  useEffect(() => {
+    if (!animTrigger) return;
+    const anim = MOVE_ANIM[animTrigger.move];
+    if (anim) {
+      setAnimating(anim);
+    } else {
+      // Move not in MOVE_ANIM (multi-move chunk etc.) — notify immediately
+      onAnimationDone?.();
+    }
+  }, [animTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDone = () => {
     setAnimating(null);

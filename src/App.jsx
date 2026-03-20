@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   C, NAMES, PAL, FLABEL, FACE_COLOR, MOVE_DESC,
   initCube, copyCube, MOVE_FN, ALL_MOVES,
@@ -8,7 +8,7 @@ import { validateCube } from "./engine/validate.js";
 import { initKociemba, cubeToKociemba, terminateKociemba, KociembaCube } from "./engine/kociemba.js";
 import Cell from "./components/Cell.jsx";
 import FlatFace from "./components/FlatFace.jsx";
-import ThreeCube from "./components/ThreeCube.jsx";
+import ThreeCube, { MOVE_ANIM } from "./components/ThreeCube.jsx";
 import MoveBadge from "./components/MoveBadge.jsx";
 import ScrambleBanner from "./components/ScrambleBanner.jsx";
 
@@ -27,6 +27,9 @@ export default function App() {
   const [step,setStep]               = useState(0);
   const [animIdx,setAnimIdx]         = useState(0);
   const [cubeFlash,setCubeFlash]     = useState(false);
+  const [pendingStep,setPendingStep] = useState(null);  // step queued behind an animation
+  const [animTrigger,setAnimTrigger] = useState(null);  // {move,key} passed to ThreeCube
+  const animKeyRef                   = useRef(0);
 
   const [err,setErr]                 = useState("");
   const [scrambleSeq,setScrambleSeq] = useState(null);
@@ -204,8 +207,35 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
     solveMode==="optimal"&&kStatus==="ready" ? handleSolveKociemba() : solveAI();
   };
 
-  const goStep=n=>{setStep(n);setAnimIdx(a=>a+1);};
-  const reset=()=>{setCube(initCube());setSolution(null);setStartCube(null);setPhase("input");setStep(0);setErr("");setScrambleSeq(null);setHistory([]);setAlgoInput("");setAlgoErr("");};
+  const goStep=n=>{
+    // Forward by exactly one step: animate the move then snap
+    if(n===step+1 && solution){
+      const rawMove=solution.steps[step]?.move?.trim()??"";
+      const tokens=rawMove.split(/\s+/).filter(Boolean);
+      // Only animate single-move steps (Kociemba produces 1-move chunks when chunkSize=1;
+      // multi-move chunks fall through to instant snap)
+      if(tokens.length===1 && MOVE_ANIM[tokens[0]]){
+        animKeyRef.current+=1;
+        setAnimTrigger({move:tokens[0],key:animKeyRef.current});
+        setPendingStep(n);
+        return;
+      }
+    }
+    // All other navigation: instant snap
+    setStep(n);
+    setAnimIdx(a=>a+1);
+  };
+
+  const handleAnimDone=()=>{
+    if(pendingStep!==null){
+      setStep(pendingStep);
+      setAnimIdx(a=>a+1);
+      setPendingStep(null);
+    }
+    setAnimTrigger(null);
+  };
+
+  const reset=()=>{setCube(initCube());setSolution(null);setStartCube(null);setPhase("input");setStep(0);setErr("");setScrambleSeq(null);setHistory([]);setAlgoInput("");setAlgoErr("");setPendingStep(null);setAnimTrigger(null);};
 
   const cur=solution?.steps?.[step];
   const total=solution?.steps?.length||0;
@@ -418,7 +448,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
               LIVE CUBE — AFTER STEP {step+1}
               {highlightFace&&<span style={{color:FACE_COLOR[highlightFace]||"#FFD600",marginLeft:8}}>[ {FLABEL[highlightFace]} FACE ]</span>}
             </div>
-            <ThreeCube cube={displayCube} width={320} height={320}/>
+            <ThreeCube cube={displayCube} width={320} height={320} animTrigger={animTrigger} onAnimationDone={handleAnimDone}/>
             <div style={{display:"flex",gap:4,marginTop:12,flexWrap:"wrap",justifyContent:"center",maxWidth:400}}>
               {solution.steps.map((_,i)=><div key={i} onClick={()=>goStep(i)} style={{height:5,width:i===step?18:5,borderRadius:3,cursor:"pointer",background:i===step?"#FFD600":i<step?"#E65100":"#1a1a2e",transition:"all .2s"}}/>)}
             </div>
@@ -453,7 +483,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
 
           {/* Nav */}
           <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:20}}>
-            {[["⏮",()=>goStep(0),step===0,false],["← BACK",()=>goStep(Math.max(0,step-1)),step===0,false],["NEXT →",()=>goStep(Math.min(total-1,step+1)),step===total-1,true],["⏭",()=>goStep(total-1),step===total-1,false]].map(([label,fn,dis,hi])=>(
+            {[["⏮",()=>goStep(0),step===0||pendingStep!==null,false],["← BACK",()=>goStep(Math.max(0,step-1)),step===0||pendingStep!==null,false],["NEXT →",()=>goStep(Math.min(total-1,step+1)),step===total-1||pendingStep!==null,true],["⏭",()=>goStep(total-1),step===total-1||pendingStep!==null,false]].map(([label,fn,dis,hi])=>(
               <button key={label} onClick={fn} disabled={dis} style={{background:hi&&!dis?"linear-gradient(135deg,#E65100,#FFD600)":"transparent",border:hi&&!dis?"none":"1px solid #1a1a2e",borderRadius:6,padding:"11px 18px",cursor:dis?"default":"pointer",color:hi&&!dis?"#000":dis?"#2a2a2a":"#888",fontFamily:"'Courier New',monospace",fontWeight:hi?"900":"400",fontSize:"0.8rem",letterSpacing:2}}>{label}</button>
             ))}
           </div>
