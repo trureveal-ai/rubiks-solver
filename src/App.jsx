@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   C, NAMES, PAL, FLABEL, FACE_COLOR, MOVE_DESC,
   initCube, copyCube, MOVE_FN, ALL_MOVES,
@@ -8,7 +8,7 @@ import { validateCube } from "./engine/validate.js";
 import { initKociemba, cubeToKociemba, terminateKociemba, KociembaCube } from "./engine/kociemba.js";
 import Cell from "./components/Cell.jsx";
 import FlatFace from "./components/FlatFace.jsx";
-import Cube3D from "./components/Cube3D.jsx";
+import ThreeCube from "./components/ThreeCube.jsx";
 import MoveBadge from "./components/MoveBadge.jsx";
 import ScrambleBanner from "./components/ScrambleBanner.jsx";
 
@@ -20,9 +20,6 @@ export default function App() {
   const [painting,setPainting]       = useState(false);
   const [flatLayout,setFlatLayout]   = useState("cross");
   const [tab,setTab]                 = useState("paint");
-  const [rotX,setRotX]               = useState(-28);
-  const [rotY,setRotY]               = useState(-38);
-  const dragRef                      = useRef(null);
 
   const [phase,setPhase]             = useState("input");
   const [solution,setSolution]       = useState(null);
@@ -99,10 +96,6 @@ export default function App() {
     for(const m of moves){await new Promise(r=>setTimeout(r,300));c=MOVE_FN[m](c);setCube({...c});}
     setAnimatingAlgo(false);
   };
-
-  const onMD=e=>{dragRef.current={x:e.clientX,y:e.clientY,rx:rotX,ry:rotY};};
-  const onMM=e=>{if(!dragRef.current)return;setRotY(dragRef.current.ry+(e.clientX-dragRef.current.x)*0.7);setRotX(dragRef.current.rx-(e.clientY-dragRef.current.y)*0.7);};
-  const onMU=()=>{dragRef.current=null;};
 
   useEffect(()=>{const up=()=>setPainting(false);window.addEventListener("mouseup",up);return()=>window.removeEventListener("mouseup",up);},[]);
   useEffect(()=>{setValidationErrs(validateCube(cube));},[cube]);
@@ -235,7 +228,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
   };
 
   return (
-    <div onMouseUp={onMU} style={{minHeight:"100vh",background:"#07070f",backgroundImage:"radial-gradient(ellipse 80% 50% at 50% -10%, #0f0f2a, transparent)",color:"#fff",fontFamily:"'Courier New',monospace",display:"flex",flexDirection:"column",alignItems:"center",padding:"28px 16px 80px",userSelect:"none"}}>
+    <div style={{minHeight:"100vh",background:"#07070f",backgroundImage:"radial-gradient(ellipse 80% 50% at 50% -10%, #0f0f2a, transparent)",color:"#fff",fontFamily:"'Courier New',monospace",display:"flex",flexDirection:"column",alignItems:"center",padding:"28px 16px 80px",userSelect:"none"}}>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
@@ -353,8 +346,8 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
           {tab==="3d" && (
             <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
               <div style={{fontSize:9,color:"#444",letterSpacing:3,marginBottom:12}}>DRAG TO ROTATE</div>
-              <div style={{cursor:"grab",marginBottom:20}} onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU}>
-                <Cube3D cube={cube} rotX={rotX} rotY={rotY}/>
+              <div style={{marginBottom:24}}>
+                <ThreeCube cube={cube} width={360} height={360}/>
               </div>
               <div style={{width:"100%",background:"#08080f",border:"1px solid #1a1a2e",borderRadius:10,padding:14}}>
                 <div style={{fontSize:7,color:"#555",letterSpacing:3,marginBottom:12,textAlign:"center"}}>INTERACTIVE FACE ROTATIONS</div>
@@ -425,9 +418,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
               LIVE CUBE — AFTER STEP {step+1}
               {highlightFace&&<span style={{color:FACE_COLOR[highlightFace]||"#FFD600",marginLeft:8}}>[ {FLABEL[highlightFace]} FACE ]</span>}
             </div>
-            <div style={{cursor:"grab"}} onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU}>
-              <Cube3D cube={displayCube} rotX={rotX} rotY={rotY} highlight={highlightFace}/>
-            </div>
+            <ThreeCube cube={displayCube} width={320} height={320}/>
             <div style={{display:"flex",gap:4,marginTop:12,flexWrap:"wrap",justifyContent:"center",maxWidth:400}}>
               {solution.steps.map((_,i)=><div key={i} onClick={()=>goStep(i)} style={{height:5,width:i===step?18:5,borderRadius:3,cursor:"pointer",background:i===step?"#FFD600":i<step?"#E65100":"#1a1a2e",transition:"all .2s"}}/>)}
             </div>
