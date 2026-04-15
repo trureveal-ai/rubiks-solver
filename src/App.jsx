@@ -30,10 +30,12 @@ export default function App() {
   const [pendingStep,setPendingStep] = useState(null);  // step queued behind an animation
   const [animTrigger,setAnimTrigger] = useState(null);  // {move,key} passed to ThreeCube
   const [playing,setPlaying]         = useState(false);
+  const [playSpeed,setPlaySpeed]     = useState("normal");
   const animKeyRef                   = useRef(0);
   const playingRef                   = useRef(false);
   // Keep playingRef in sync; use playingRef.current in callbacks to avoid stale closures.
   const setPlayingSync = (val) => { playingRef.current = val; setPlaying(val); };
+  const SPEEDS = { slow:{anim:0.8,delay:500}, normal:{anim:0.4,delay:300}, fast:{anim:0.2,delay:100} };
 
   const [err,setErr]                 = useState("");
   const [scrambleSeq,setScrambleSeq] = useState(null);
@@ -118,9 +120,37 @@ export default function App() {
     if(!playingRef.current||phase!=="solution") return;
     const t=solution?.steps?.length??0;
     if(step>=t){setPlayingSync(false);return;}
-    const id=setTimeout(()=>goStep(step+1),300);
+    const id=setTimeout(()=>goStep(step+1),SPEEDS[playSpeed].delay);
     return()=>clearTimeout(id);
-  },[step]); // eslint-disable-line react-hooks/exhaustive-deps
+  },[step,playSpeed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Solution validation diagnostics ────────────────────────────
+  useEffect(()=>{
+    if(phase!=="solution"||!solution||!displayCube) return;
+    const t=solution.steps.length;
+    if(step!==t||pendingStep!==null) return;
+    const solved=initCube();
+    console.log('[solved-check] displayCube:', JSON.parse(JSON.stringify(displayCube)));
+    console.log('[solved-check] expected (initCube):', JSON.parse(JSON.stringify(solved)));
+    let allOk=true;
+    for(const face of ['U','D','F','B','R','L']){
+      const got=displayCube[face];
+      const exp=solved[face];
+      const center=got[4];
+      for(let i=0;i<9;i++){
+        if(got[i]!==center){
+          console.log(`[solved-check] Face ${face}[${i}]: center=${center}, sticker=${got[i]} — not uniform`);
+          allOk=false;
+        }
+        if(got[i]!==exp[i]){
+          console.log(`[solved-check] Face ${face}[${i}]: expected=${exp[i]}, got=${got[i]}`);
+          allOk=false;
+        }
+      }
+    }
+    if(allOk) console.log('[solved-check] ✓ Cube is fully solved');
+    else console.log('[solved-check] ✗ Cube is NOT solved — see mismatches above');
+  },[step,pendingStep]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Scramble ───────────────────────────────────────────────────
   const handleScramble=async()=>{
@@ -166,6 +196,19 @@ export default function App() {
         setSolution({totalMoves:0,steps:[{n:1,stage:"Solved!",move:"",explain:"Your cube is already solved!",tip:""}]});
         setStartCube(copyCube(cube));setStep(0);setAnimIdx(0);setPhase("solution");
         return;
+      }
+
+      // ── Verify solution against MOVE_FN ──────────────────────────
+      {
+        let v=copyCube(cube);
+        moves.forEach(m=>{if(MOVE_FN[m])v=MOVE_FN[m](v);});
+        const expected=initCube();
+        let ok=true;
+        for(const face of ['U','D','F','B','R','L']){
+          v[face].forEach((c,i)=>{if(c!==expected[face][i]){console.log(`[verify] MISMATCH Face ${face}[${i}]: expected=${expected[face][i]}, got=${c}`);ok=false;}});
+        }
+        if(ok) console.log('[verify] ✓ VERIFY PASS — solution moves applied to input cube yield solved state');
+        else{console.log('[verify] ✗ VERIFY FAIL — final state:',JSON.parse(JSON.stringify(v)));console.log('[verify] expected:',JSON.parse(JSON.stringify(expected)));}
       }
 
       const steps=moves.map((m,i)=>({
@@ -439,6 +482,50 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
             }} style={{background:"#0d0d18",border:"1px solid #C62828",borderRadius:6,padding:"6px 10px",color:"#C62828",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
               dbg seq
             </button>
+            <button onClick={()=>{
+              // R U R' U' has order 6 — applying it 6× returns to solved.
+              const seq=["R","U","R'","U'"];
+              const reps=6;
+              let c=initCube();
+              for(let i=0;i<reps;i++) seq.forEach(m=>{c=MOVE_FN[m](c);});
+              const expected=initCube();
+              let allOk=true;
+              for(const face of ['U','D','F','B','R','L']){
+                const got=c[face]; const exp=expected[face];
+                for(let i=0;i<9;i++){
+                  if(got[i]!==exp[i]){
+                    console.log(`[test-solve] FAIL Face ${face}[${i}]: expected=${exp[i]}, got=${got[i]}`);
+                    allOk=false;
+                  }
+                }
+              }
+              if(allOk) console.log('[test-solve] ✓ PASS — R U R\' U\' ×6 returns to solved');
+              else console.log('[test-solve] ✗ FAIL — move functions are inconsistent');
+            }} style={{background:"#0d0d18",border:"1px solid #2E7D32",borderRadius:6,padding:"6px 10px",color:"#2E7D32",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
+              Test Solve
+            </button>
+            <button onClick={()=>{
+              if(kStatus!=="ready"){console.log('[test-moves] solver not ready — wait for kStatus=ready');return;}
+              console.log('[test-moves] starting single-move convention test...');
+              const faces=['U','D','F','B','R','L'];
+              const expectedInverse={"U":"U'","D":"D'","F":"F'","B":"B'","R":"R'","L":"L'"};
+              let allOk=true;
+              for(const face of faces){
+                const after=MOVE_FN[face](initCube());
+                const facelets=cubeToKociemba(after);
+                const kc=KociembaCube.fromString(facelets);
+                const sol=kc.solve();
+                const moves=sol?sol.trim().split(/\s+/).filter(Boolean):[];
+                const exp=expectedInverse[face];
+                const pass=moves.length===1&&sol.trim()===exp;
+                console.log(`[test-moves] ${face}: solution="${sol||'(empty)'}" expected="${exp}" moves=${moves.length} → ${pass?'✓ PASS':'✗ FAIL'}`);
+                if(!pass) allOk=false;
+              }
+              if(allOk) console.log('[test-moves] ✓ ALL 6 FACES PASS — MOVE_FN conventions match Kociemba');
+              else       console.log('[test-moves] ✗ SOME FACES FAIL — MOVE_FN↔Kociemba convention mismatch');
+            }} style={{background:"#0d0d18",border:`1px solid ${kStatus==="ready"?"#FFD600":"#333"}`,borderRadius:6,padding:"6px 10px",color:kStatus==="ready"?"#FFD600":"#444",fontFamily:"'Courier New',monospace",fontSize:10,cursor:kStatus==="ready"?"pointer":"default",opacity:kStatus==="ready"?1:0.45}}>
+              Test Moves
+            </button>
           </div>
         </div>
       )}
@@ -461,7 +548,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
               LIVE CUBE — {step} OF {total} MOVES APPLIED
               {highlightFace&&<span style={{color:FACE_COLOR[highlightFace]||"#FFD600",marginLeft:8}}>[ {FLABEL[highlightFace]} FACE ]</span>}
             </div>
-            <ThreeCube cube={displayCube} width={320} height={320} animTrigger={animTrigger} onAnimationDone={handleAnimDone}/>
+            <ThreeCube cube={displayCube} width={320} height={320} animTrigger={animTrigger} onAnimationDone={handleAnimDone} animDuration={SPEEDS[playSpeed].anim}/>
             <div style={{display:"flex",gap:4,marginTop:12,flexWrap:"wrap",justifyContent:"center",maxWidth:400}}>
               {solution.steps.map((_,i)=><div key={i} onClick={()=>goStep(i+1)} style={{height:5,width:i===step-1?18:5,borderRadius:3,cursor:"pointer",background:i<step?"#E65100":i===step?"#FFD600":"#1a1a2e",transition:"all .2s"}}/>)}
             </div>
@@ -504,6 +591,11 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
               disabled={step===total}
               style={{background:playing?"#1a1a2e":"linear-gradient(135deg,#E65100,#FFD600)",border:"none",borderRadius:6,padding:"11px 22px",cursor:step===total?"default":"pointer",color:playing?"#FFD600":step===total?"#333":"#000",fontFamily:"'Courier New',monospace",fontWeight:900,fontSize:"1rem",letterSpacing:2}}
             >{playing?"⏸":"▶"}</button>
+            <div style={{display:"flex",gap:3,alignItems:"center"}}>
+              {[["0.5×","slow"],["1×","normal"],["2×","fast"]].map(([label,key])=>(
+                <button key={key} onClick={()=>setPlaySpeed(key)} style={{padding:"7px 9px",border:`1px solid ${playSpeed===key?"#FFD600":"#1a1a2e"}`,borderRadius:5,cursor:"pointer",fontFamily:"'Courier New',monospace",fontSize:9,letterSpacing:1,background:playSpeed===key?"#FFD60018":"transparent",color:playSpeed===key?"#FFD600":"#444"}}>{label}</button>
+              ))}
+            </div>
             {[["NEXT →",()=>{setPlayingSync(false);goStep(Math.min(total,step+1));},step===total||pendingStep!==null,true],["⏭",()=>{setPlayingSync(false);goStep(total);},step===total||pendingStep!==null,false]].map(([label,fn,dis,hi])=>(
               <button key={label} onClick={fn} disabled={dis} style={{background:hi&&!dis?"linear-gradient(135deg,#E65100,#FFD600)":"transparent",border:hi&&!dis?"none":"1px solid #1a1a2e",borderRadius:6,padding:"11px 18px",cursor:dis?"default":"pointer",color:hi&&!dis?"#000":dis?"#2a2a2a":"#888",fontFamily:"'Courier New',monospace",fontWeight:hi?"900":"400",fontSize:"0.8rem",letterSpacing:2}}>{label}</button>
             ))}

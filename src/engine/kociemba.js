@@ -549,6 +549,13 @@ export function solveFromFacelets(facelets) {
   console.log('[kociemba] calling c.solve()...');
   const result=c.solve();
   console.log('[kociemba] c.solve() returned:', result);
+  // Self-verify: apply solution to clone and check isSolved
+  const verifyC=c.clone(); verifyC.move(result);
+  console.log('[kociemba-selfverify] isSolved after solution:', verifyC.isSolved(), '| co:', JSON.stringify(verifyC.co), '| cp:', JSON.stringify(verifyC.cp));
+  // Round-trip check: does fromString→asString preserve the input?
+  const roundTrip=c.asString();
+  const mismatch=facelets.split('').findIndex((ch,i)=>ch!==roundTrip[i]);
+  console.log('[kociemba-roundtrip] facelets match asString:', mismatch===-1, mismatch!==-1?'first mismatch at pos '+mismatch+' input='+facelets[mismatch]+' got='+roundTrip[mismatch]:'');
   return result;
 }
 

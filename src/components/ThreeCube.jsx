@@ -58,7 +58,6 @@ function hexToNum(hex) {
 
 const PLASTIC  = 0x111111;
 const GAP      = 1.04;
-const DURATION = 0.4;
 const AXIS_IDX = { x: 0, y: 1, z: 2 };
 
 function buildStickerMap(cube) {
@@ -129,7 +128,7 @@ for (let x = -1; x <= 1; x++)
         POSITIONS.push([x, y, z]);
 
 // ── CubeScene (must live inside <Canvas> to use useFrame) ───────────────────
-function CubeScene({ stickerMap, animating, onDone }) {
+function CubeScene({ stickerMap, animating, onDone, duration }) {
   const layerGroupRef = useRef();
   const elapsedRef    = useRef(0);
 
@@ -150,13 +149,13 @@ function CubeScene({ stickerMap, animating, onDone }) {
 
   useFrame((_, delta) => {
     if (!animating || !layerGroupRef.current) return;
-    if (elapsedRef.current >= DURATION) return; // already finished
+    if (elapsedRef.current >= duration) return; // already finished
 
     elapsedRef.current += delta;
-    const t = Math.min(elapsedRef.current / DURATION, 1);
+    const t = Math.min(elapsedRef.current / duration, 1);
     layerGroupRef.current.rotation[animating.axis] = t * animating.angle;
 
-    if (elapsedRef.current >= DURATION) onDone?.();
+    if (elapsedRef.current >= duration) onDone?.();
   });
 
   return (
@@ -183,7 +182,7 @@ function CubeScene({ stickerMap, animating, onDone }) {
 // ── Public component ─────────────────────────────────────────────────────────
 const TEST_MOVES = ["U", "R", "F", "D", "L", "B"];
 
-export default function ThreeCube({ cube, width = 340, height = 340, animTrigger, onAnimationDone }) {
+export default function ThreeCube({ cube, width = 340, height = 340, animTrigger, onAnimationDone, animDuration = 0.4 }) {
   const stickerMap = useMemo(() => buildStickerMap(cube), [cube]);
   const [animating, setAnimating] = useState(null);
 
@@ -219,6 +218,7 @@ export default function ThreeCube({ cube, width = 340, height = 340, animTrigger
           stickerMap={stickerMap}
           animating={animating}
           onDone={handleDone}
+          duration={animDuration}
         />
       </Canvas>
 
