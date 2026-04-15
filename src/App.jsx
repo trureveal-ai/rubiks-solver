@@ -63,13 +63,20 @@ export default function App() {
 
   // ── Computed ───────────────────────────────────────────────────
   const highlightFace = useMemo(()=>{
-    if(!solution?.steps?.[step]?.move) return null;
-    return solution.steps[step].move.trim().split(/\s+/)[0]?.[0]||null;
+    const steps=solution?.steps;
+    if(!steps) return null;
+    const mv=steps[Math.min(step,steps.length-1)]?.move;
+    if(!mv) return null;
+    return mv.trim().split(/\s+/)[0]?.[0]||null;
   },[solution,step]);
 
+  // step = number of moves completed (0 = startCube, total = fully solved).
+  // During animation pendingStep is set but step hasn't advanced yet, so the
+  // same formula gives the correct pre-animation base automatically.
   const displayCube = useMemo(()=>{
     if(!solution||!startCube) return cube;
-    return replayToCube(startCube,solution.steps,step);
+    if(step===0) return startCube;
+    return replayToCube(startCube,solution.steps,step-1);
   },[solution,startCube,step]);
 
   // ── Handlers ──────────────────────────────────────────────────
@@ -150,18 +157,13 @@ export default function App() {
         return;
       }
 
-      const chunkSize=5;
-      const steps=[];
-      for(let i=0;i<moves.length;i+=chunkSize){
-        const chunk=moves.slice(i,i+chunkSize);
-        steps.push({
-          n:steps.length+1,
-          stage:`Moves ${i+1}–${Math.min(i+chunkSize,moves.length)}`,
-          move:chunk.join(" "),
-          explain:chunk.map(m=>MOVE_DESC[m]||m).join(", then "),
-          tip:i===0?"Kociemba optimal solution — typically 20 moves or fewer.":"",
-        });
-      }
+      const steps=moves.map((m,i)=>({
+        n:i+1,
+        stage:`Move ${i+1}`,
+        move:m,
+        explain:MOVE_DESC[m]||m,
+        tip:i===0?"Kociemba optimal solution — typically 20 moves or fewer.":"",
+      }));
 
       setSolution({totalMoves:moves.length,steps});
       setStartCube(copyCube(cube));
@@ -208,12 +210,10 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
   };
 
   const goStep=n=>{
-    // Forward by exactly one step: animate the move then snap
+    // step = moves completed. Advancing to n=step+1 plays steps[step] (the next move).
     if(n===step+1 && solution){
-      const rawMove=solution.steps[step]?.move?.trim()??"";
-      const tokens=rawMove.split(/\s+/).filter(Boolean);
-      // Only animate single-move steps (Kociemba produces 1-move chunks when chunkSize=1;
-      // multi-move chunks fall through to instant snap)
+      const move=solution.steps[step]?.move?.trim()??"";
+      const tokens=move.split(/\s+/).filter(Boolean);
       if(tokens.length===1 && MOVE_ANIM[tokens[0]]){
         animKeyRef.current+=1;
         setAnimTrigger({move:tokens[0],key:animKeyRef.current});
@@ -221,7 +221,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
         return;
       }
     }
-    // All other navigation: instant snap
+    // Back, jump, or non-animatable move: instant snap
     setStep(n);
     setAnimIdx(a=>a+1);
   };
@@ -237,9 +237,9 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
 
   const reset=()=>{setCube(initCube());setSolution(null);setStartCube(null);setPhase("input");setStep(0);setErr("");setScrambleSeq(null);setHistory([]);setAlgoInput("");setAlgoErr("");setPendingStep(null);setAnimTrigger(null);};
 
-  const cur=solution?.steps?.[step];
   const total=solution?.steps?.length||0;
-  const pct=total?Math.round(((step+1)/total)*100):0;
+  const cur=solution?.steps?.[step<total?step:total-1];  // cap at last when fully solved
+  const pct=total?Math.round((step/total)*100):0;
   const STAGE_C={"White Cross":"#eee","White Corners":"#aaa","Middle Layer":"#FFD600","Yellow Cross":"#FFD600","Orient Yellow Corners":"#FF6D00","Position Last Layer Corners":"#C62828","Cycle Last Layer Edges":"#2E7D32","Solved!":"#2E7D32"};
   const sc=STAGE_C[cur?.stage]||"#FF6D00";
   const busy=scrambling||animatingAlgo;
@@ -445,18 +445,18 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
           {/* Live 3D cube */}
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:20,background:"#08080f",border:"1px solid #1a1a2e",borderRadius:14,padding:"20px 20px 16px",animation:cubeFlash?"glow .35s ease":"none"}}>
             <div style={{fontSize:7,color:"#444",letterSpacing:4,marginBottom:14}}>
-              LIVE CUBE — AFTER STEP {step+1}
+              LIVE CUBE — {step} OF {total} MOVES APPLIED
               {highlightFace&&<span style={{color:FACE_COLOR[highlightFace]||"#FFD600",marginLeft:8}}>[ {FLABEL[highlightFace]} FACE ]</span>}
             </div>
             <ThreeCube cube={displayCube} width={320} height={320} animTrigger={animTrigger} onAnimationDone={handleAnimDone}/>
             <div style={{display:"flex",gap:4,marginTop:12,flexWrap:"wrap",justifyContent:"center",maxWidth:400}}>
-              {solution.steps.map((_,i)=><div key={i} onClick={()=>goStep(i)} style={{height:5,width:i===step?18:5,borderRadius:3,cursor:"pointer",background:i===step?"#FFD600":i<step?"#E65100":"#1a1a2e",transition:"all .2s"}}/>)}
+              {solution.steps.map((_,i)=><div key={i} onClick={()=>goStep(i+1)} style={{height:5,width:i===step-1?18:5,borderRadius:3,cursor:"pointer",background:i<step?"#E65100":i===step?"#FFD600":"#1a1a2e",transition:"all .2s"}}/>)}
             </div>
           </div>
 
           {/* Stats */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",background:"#0d0d18",border:"1px solid #1a1a2e",borderRadius:8,marginBottom:14,overflow:"hidden"}}>
-            {[["TOTAL MOVES",solution.totalMoves,"#FFD600"],["STEP",`${step+1} / ${total}`,"#fff"],["PROGRESS",`${pct}%`,"#2E7D32"]].map(([l,v,col])=>(
+            {[["TOTAL MOVES",solution.totalMoves,"#FFD600"],["DONE",`${step} / ${total}`,"#fff"],["PROGRESS",`${pct}%`,"#2E7D32"]].map(([l,v,col])=>(
               <div key={l} style={{padding:"12px 0",textAlign:"center",borderRight:"1px solid #1a1a2e"}}>
                 <div style={{fontSize:7,color:"#444",letterSpacing:2,marginBottom:4}}>{l}</div>
                 <div style={{fontSize:"1.2rem",fontWeight:900,color:col}}>{v}</div>
@@ -483,7 +483,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
 
           {/* Nav */}
           <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:20}}>
-            {[["⏮",()=>goStep(0),step===0||pendingStep!==null,false],["← BACK",()=>goStep(Math.max(0,step-1)),step===0||pendingStep!==null,false],["NEXT →",()=>goStep(Math.min(total-1,step+1)),step===total-1||pendingStep!==null,true],["⏭",()=>goStep(total-1),step===total-1||pendingStep!==null,false]].map(([label,fn,dis,hi])=>(
+            {[["⏮",()=>goStep(0),step===0||pendingStep!==null,false],["← BACK",()=>goStep(Math.max(0,step-1)),step===0||pendingStep!==null,false],["NEXT →",()=>goStep(Math.min(total,step+1)),step===total||pendingStep!==null,true],["⏭",()=>goStep(total),step===total||pendingStep!==null,false]].map(([label,fn,dis,hi])=>(
               <button key={label} onClick={fn} disabled={dis} style={{background:hi&&!dis?"linear-gradient(135deg,#E65100,#FFD600)":"transparent",border:hi&&!dis?"none":"1px solid #1a1a2e",borderRadius:6,padding:"11px 18px",cursor:dis?"default":"pointer",color:hi&&!dis?"#000":dis?"#2a2a2a":"#888",fontFamily:"'Courier New',monospace",fontWeight:hi?"900":"400",fontSize:"0.8rem",letterSpacing:2}}>{label}</button>
             ))}
           </div>
@@ -493,7 +493,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
             <summary style={{cursor:"pointer",fontSize:9,color:"#444",letterSpacing:3,padding:"10px 14px",background:"#0d0d18",border:"1px solid #1a1a2e",borderRadius:8,listStyle:"none"}}>▸ VIEW ALL {solution.totalMoves} MOVES</summary>
             <div style={{background:"#08080f",border:"1px solid #1a1a2e",borderTop:"none",borderRadius:"0 0 8px 8px",maxHeight:200,overflowY:"auto",padding:6}}>
               {solution.steps.map((s,i)=>(
-                <div key={i} onClick={()=>goStep(i)} style={{display:"flex",alignItems:"center",gap:12,padding:"7px 10px",borderRadius:5,cursor:"pointer",marginBottom:2,background:i===step?"#1a1a2e":"transparent",borderLeft:`2px solid ${i===step?"#FFD600":"transparent"}`}}>
+                <div key={i} onClick={()=>goStep(i+1)} style={{display:"flex",alignItems:"center",gap:12,padding:"7px 10px",borderRadius:5,cursor:"pointer",marginBottom:2,background:i===step-1?"#1a1a2e":"transparent",borderLeft:`2px solid ${i===step-1?"#FFD600":"transparent"}`}}>
                   <span style={{color:"#333",fontSize:9,minWidth:20}}>{i+1}</span>
                   <span style={{color:"#FFD600",fontWeight:900,minWidth:88,fontSize:"0.82rem",letterSpacing:2}}>{s.move||"—"}</span>
                   <span style={{color:"#555",fontSize:9}}>{s.stage}</span>
