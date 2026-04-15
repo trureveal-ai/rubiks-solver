@@ -29,7 +29,11 @@ export default function App() {
   const [cubeFlash,setCubeFlash]     = useState(false);
   const [pendingStep,setPendingStep] = useState(null);  // step queued behind an animation
   const [animTrigger,setAnimTrigger] = useState(null);  // {move,key} passed to ThreeCube
+  const [playing,setPlaying]         = useState(false);
   const animKeyRef                   = useRef(0);
+  const playingRef                   = useRef(false);
+  // Keep playingRef in sync; use playingRef.current in callbacks to avoid stale closures.
+  const setPlayingSync = (val) => { playingRef.current = val; setPlaying(val); };
 
   const [err,setErr]                 = useState("");
   const [scrambleSeq,setScrambleSeq] = useState(null);
@@ -110,6 +114,13 @@ export default function App() {
   useEffect(()=>{const up=()=>setPainting(false);window.addEventListener("mouseup",up);return()=>window.removeEventListener("mouseup",up);},[]);
   useEffect(()=>{setValidationErrs(validateCube(cube));},[cube]);
   useEffect(()=>{if(phase!=="solution")return;setCubeFlash(true);const t=setTimeout(()=>setCubeFlash(false),350);return()=>clearTimeout(t);},[step,phase]);
+  useEffect(()=>{
+    if(!playingRef.current||phase!=="solution") return;
+    const t=solution?.steps?.length??0;
+    if(step>=t){setPlayingSync(false);return;}
+    const id=setTimeout(()=>goStep(step+1),300);
+    return()=>clearTimeout(id);
+  },[step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Scramble ───────────────────────────────────────────────────
   const handleScramble=async()=>{
@@ -210,6 +221,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
   };
 
   const goStep=n=>{
+    console.log("goStep called with n="+n+", current step="+step+", pendingStep="+pendingStep);
     // step = moves completed. Advancing to n=step+1 plays steps[step] (the next move).
     if(n===step+1 && solution){
       const move=solution.steps[step]?.move?.trim()??"";
@@ -227,6 +239,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
   };
 
   const handleAnimDone=()=>{
+    console.log("animDone, step="+step+", playingRef="+playingRef.current);
     if(pendingStep!==null){
       setStep(pendingStep);
       setAnimIdx(a=>a+1);
@@ -235,7 +248,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
     setAnimTrigger(null);
   };
 
-  const reset=()=>{setCube(initCube());setSolution(null);setStartCube(null);setPhase("input");setStep(0);setErr("");setScrambleSeq(null);setHistory([]);setAlgoInput("");setAlgoErr("");setPendingStep(null);setAnimTrigger(null);};
+  const reset=()=>{setCube(initCube());setSolution(null);setStartCube(null);setPhase("input");setStep(0);setErr("");setScrambleSeq(null);setHistory([]);setAlgoInput("");setAlgoErr("");setPendingStep(null);setAnimTrigger(null);setPlayingSync(false);};
 
   const total=solution?.steps?.length||0;
   const cur=solution?.steps?.[step<total?step:total-1];  // cap at last when fully solved
@@ -483,7 +496,15 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
 
           {/* Nav */}
           <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:20}}>
-            {[["⏮",()=>goStep(0),step===0||pendingStep!==null,false],["← BACK",()=>goStep(Math.max(0,step-1)),step===0||pendingStep!==null,false],["NEXT →",()=>goStep(Math.min(total,step+1)),step===total||pendingStep!==null,true],["⏭",()=>goStep(total),step===total||pendingStep!==null,false]].map(([label,fn,dis,hi])=>(
+            {[["⏮",()=>goStep(0),step===0||pendingStep!==null,false],["← BACK",()=>{setPlayingSync(false);goStep(Math.max(0,step-1));},step===0||pendingStep!==null,false]].map(([label,fn,dis,hi])=>(
+              <button key={label} onClick={fn} disabled={dis} style={{background:"transparent",border:"1px solid #1a1a2e",borderRadius:6,padding:"11px 18px",cursor:dis?"default":"pointer",color:dis?"#2a2a2a":"#888",fontFamily:"'Courier New',monospace",fontSize:"0.8rem",letterSpacing:2}}>{label}</button>
+            ))}
+            <button
+              onClick={()=>{if(!playing){console.log("PLAY clicked, step="+step);setPlayingSync(true);goStep(step+1);}else{setPlayingSync(false);}}}
+              disabled={step===total}
+              style={{background:playing?"#1a1a2e":"linear-gradient(135deg,#E65100,#FFD600)",border:"none",borderRadius:6,padding:"11px 22px",cursor:step===total?"default":"pointer",color:playing?"#FFD600":step===total?"#333":"#000",fontFamily:"'Courier New',monospace",fontWeight:900,fontSize:"1rem",letterSpacing:2}}
+            >{playing?"⏸":"▶"}</button>
+            {[["NEXT →",()=>{setPlayingSync(false);goStep(Math.min(total,step+1));},step===total||pendingStep!==null,true],["⏭",()=>{setPlayingSync(false);goStep(total);},step===total||pendingStep!==null,false]].map(([label,fn,dis,hi])=>(
               <button key={label} onClick={fn} disabled={dis} style={{background:hi&&!dis?"linear-gradient(135deg,#E65100,#FFD600)":"transparent",border:hi&&!dis?"none":"1px solid #1a1a2e",borderRadius:6,padding:"11px 18px",cursor:dis?"default":"pointer",color:hi&&!dis?"#000":dis?"#2a2a2a":"#888",fontFamily:"'Courier New',monospace",fontWeight:hi?"900":"400",fontSize:"0.8rem",letterSpacing:2}}>{label}</button>
             ))}
           </div>
