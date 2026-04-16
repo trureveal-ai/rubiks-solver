@@ -1,6 +1,10 @@
 // Kociemba two-phase algorithm — adapted from cubejs (MIT) as pure ESM.
 // No CJS wrappers, no require(), no this.Cube pattern.
 
+export class ParityError extends Error {
+  constructor(message) { super(message); this.name='ParityError'; }
+}
+
 // ─── Face / cubie indices ────────────────────────────────────────────────────
 const U=0, R=1, F=2, D=3, L=4, B=5;
 const URF=0, UFL=1, ULB=2, UBR=3, DFR=4, DLF=5, DBL=6, DRB=7;
@@ -102,6 +106,7 @@ class Cube {
       }
       seen.add(cube.ep[i]);
     }
+    cube.verifyParity();
     return cube;
   }
 
@@ -111,6 +116,26 @@ class Cube {
     for (let c=0;c<=7;c++) if (clone.cp[c]!==c||clone.co[c]!==0) return false;
     for (let e=0;e<=11;e++) if (clone.ep[e]!==e||clone.eo[e]!==0) return false;
     return true;
+  }
+
+  verifyParity() {
+    // 1. Corner orientation sum must be divisible by 3
+    const coSum=this.co.reduce((a,v)=>a+v,0);
+    if (coSum%3!==0)
+      throw new ParityError(`Invalid cube: corner orientation sum=${coSum} (must be divisible by 3) — co=${JSON.stringify(this.co)}`);
+
+    // 2. Edge orientation sum must be divisible by 2
+    const eoSum=this.eo.reduce((a,v)=>a+v,0);
+    if (eoSum%2!==0)
+      throw new ParityError(`Invalid cube: edge orientation sum=${eoSum} (must be divisible by 2) — eo=${JSON.stringify(this.eo)}`);
+
+    // 3. Corner permutation parity must equal edge permutation parity
+    let cPar=0;
+    for (let i=0;i<8;i++) for (let j=i+1;j<8;j++) if (this.cp[i]>this.cp[j]) cPar^=1;
+    let ePar=0;
+    for (let i=0;i<12;i++) for (let j=i+1;j<12;j++) if (this.ep[i]>this.ep[j]) ePar^=1;
+    if (cPar!==ePar)
+      throw new ParityError(`Invalid cube: corner parity=${cPar} ≠ edge parity=${ePar} — cp=${JSON.stringify(this.cp)} ep=${JSON.stringify(this.ep)}`);
   }
 
   centerMultiply(other) {
@@ -391,6 +416,10 @@ Cube.prototype.solveUpright = function(maxDepth=22) {
   const moveNames=[];
   for (let face=0;face<=5;face++) for (let power=0;power<=2;power++) moveNames.push(faceName[face]+powerName[power]);
 
+  // Fast pre-check: handle 0- and 1-move solutions before entering IDA*
+  if (this.isSolved()) return '';
+  for (let mv=0;mv<18;mv++) { if (this.clone().move(mv).isSolved()) { console.log('[kociemba] 1-move solution:',moveNames[mv]); return moveNames[mv]; } }
+
   let solution=null;
   const freeStates=[];
 
@@ -416,7 +445,13 @@ Cube.prototype.solveUpright = function(maxDepth=22) {
     next1(move) {
       const n=freeStates.pop(); n.parent=this; n.lastMove=move; n.depth=this.depth+1;
       n.flip=this.mv('flip',this.flip,move); n.twist=this.mv('twist',this.twist,move);
-      n.slice=this.mv('FRtoBR',this.slice*24,move)/24|0; return n;
+      n.slice=this.mv('FRtoBR',this.slice*24,move)/24|0;
+      // Verify twist table is consistent with actual cornerMultiply
+      const _tc=new Cube(); _tc.twist(this.twist);
+      const _face=move/3|0,_pow=move%3; for(let _x=0;_x<=_pow;_x++) _tc.cornerMultiply(Cube.moves[_face]);
+      const _actual=_tc.twist();
+      if(_actual!==n.twist) console.warn(`[next1-twist-mismatch] move=${move} table=${n.twist} actual=${_actual} from=${this.twist}`);
+      return n;
     }
     moves2() { return this.lastMove!==null ? nextMoves2[this.lastMove/3|0] : allMoves2; }
     minDist2() {
@@ -426,7 +461,10 @@ Cube.prototype.solveUpright = function(maxDepth=22) {
       );
     }
     init2(top=true) {
-      if (this.parent===null) return;
+      if (this.parent===null) {
+        if (top) this.URtoDF=this.mv('mergeURtoDF',this.URtoUL,this.UBtoDF);
+        return;
+      }
       this.parent.init2(false);
       this.URFtoDLF=this.mv('URFtoDLF',this.parent.URFtoDLF,this.lastMove);
       this.FRtoBR=this.mv('FRtoBR',this.parent.FRtoBR,this.lastMove);
@@ -448,8 +486,12 @@ Cube.prototype.solveUpright = function(maxDepth=22) {
   console.log('[kociemba] states allocated, calling initFrom...');
 
   function phase2search(state) {
+    // Decode twist back to co so we can confirm phase1 left co all-zero
+    const _tco=new Cube(); _tco.twist(state.twist);
+    const _coAllZero=_tco.co.every(v=>v===0);
+    console.log(`[phase2search] depth=${state.depth} twist=${state.twist} flip=${state.flip} co=${JSON.stringify(_tco.co)} co_all_zero=${_coAllZero}${_coAllZero?'':' *** BAD HANDOFF ***'}`);
     state.init2();
-    for (let depth=1;depth<=maxDepth-state.depth;depth++) {
+    for (let depth=0;depth<=maxDepth-state.depth;depth++) {
       phase2(state,depth); if (solution!==null) return;
     }
   }
@@ -504,9 +546,24 @@ Cube.prototype.solve = function(maxDepth=22) {
   const rotation=new Cube().move(upright).center;
   console.log('[kociemba] rotation=', JSON.stringify(rotation));
   const uprightSol=clone.solveUpright(maxDepth);
-  return uprightSol.split(' ').filter(Boolean).map(move=>{
-    return solveFaceNames[rotation[solveFaceNums[move[0]]]]+(move.length>1?move[1]:'');
-  }).join(' ');
+  console.log('[solve] uprightSol=', uprightSol);
+  const mapped=uprightSol.split(' ').filter(Boolean).map(move=>{
+    const origFace=move[0];
+    const origPower=move.length>1?move[1]:'';
+    const mappedFace=solveFaceNames[rotation[solveFaceNums[origFace]]];
+    if(origPower!=='' && origPower!=='2' && origPower!=="'") console.warn('[solve] unexpected power in uprightSol move:',move);
+    if(mappedFace!==origFace) console.log(`[solve-map] ${origFace}${origPower} → ${mappedFace}${origPower}`);
+    return mappedFace+origPower;
+  });
+  const finalSol=mapped.join(' ');
+  console.log('[solve] finalSol=', finalSol);
+  // Flag any move where the power changed (shouldn't happen — mapping only changes face, not power)
+  uprightSol.split(' ').filter(Boolean).forEach((orig,i)=>{
+    const fin=mapped[i];
+    const origPow=orig.slice(1), finPow=fin.slice(1);
+    if(origPow!==finPow) console.error(`[solve-power-mismatch] index=${i} upright="${orig}" mapped="${fin}" — power changed!`);
+  });
+  return finalSol;
 };
 
 // ─── App interface ───────────────────────────────────────────────────────────
@@ -539,13 +596,24 @@ export function solveKociemba(cube) {
 }
 
 // Used by solve.worker.js — synchronous, called after Cube.initSolver()
+// Returns { solution: string } on success, or { parityError: string } if the
+// cube has an unsolvable parity violation. All other errors are thrown normally.
 export function solveFromFacelets(facelets) {
   console.log('[kociemba] solveFromFacelets entry, facelets.length=', facelets.length);
-  const c=Cube.fromString(facelets);
+  let c;
+  try {
+    c=Cube.fromString(facelets);
+  } catch(err) {
+    if (err instanceof ParityError) {
+      console.error('[kociemba] parity check failed:', err.message);
+      return { parityError: err.message };
+    }
+    throw err;
+  }
   console.log('[kociemba] fromString done, ep[0]=', c.ep[0], 'co[0]=', c.co[0]);
   const solved=c.isSolved();
   console.log('[kociemba] isSolved=', solved);
-  if (solved) return '';
+  if (solved) return { solution: '' };
   console.log('[kociemba] calling c.solve()...');
   const result=c.solve();
   console.log('[kociemba] c.solve() returned:', result);
@@ -556,7 +624,7 @@ export function solveFromFacelets(facelets) {
   const roundTrip=c.asString();
   const mismatch=facelets.split('').findIndex((ch,i)=>ch!==roundTrip[i]);
   console.log('[kociemba-roundtrip] facelets match asString:', mismatch===-1, mismatch!==-1?'first mismatch at pos '+mismatch+' input='+facelets[mismatch]+' got='+roundTrip[mismatch]:'');
-  return result;
+  return { solution: result };
 }
 
 export function terminateKociemba() {}

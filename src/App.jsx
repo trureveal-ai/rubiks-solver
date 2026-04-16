@@ -393,12 +393,12 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
 
               {flatLayout==="cross" && (
                 <div onMouseDown={()=>setPainting(true)} style={{display:"grid",gridTemplateColumns:"repeat(4,auto)",gridTemplateRows:"repeat(3,auto)",gridTemplateAreas:`". U . ." "L F R B" ". D . ."`,gap:6,justifyContent:"center"}}>
-                  {["U","L","F","R","B","D"].map(fk=><div key={fk} style={{gridArea:fk}}><FlatFace faceKey={fk} stickers={cube[fk]} onPaint={paint} onCycle={cycleSticker} painting={painting} cycleMode={cycleMode}/></div>)}
+                  {["U","L","F","R","B","D"].map(fk=><div key={fk} style={{gridArea:fk}}><FlatFace faceKey={fk} stickers={cube[fk]} onPaint={paint} onCycle={cycleSticker} painting={painting} cycleMode={cycleMode} onHover={(f,i)=>console.log(`[hover] ${f}[${i}]`)}/></div>)}
                 </div>
               )}
               {flatLayout==="grid" && (
                 <div onMouseDown={()=>setPainting(true)} style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,maxWidth:330,margin:"0 auto"}}>
-                  {["U","R","F","B","D","L"].map(fk=><div key={fk}><FlatFace faceKey={fk} stickers={cube[fk]} onPaint={paint} onCycle={cycleSticker} painting={painting} cycleMode={cycleMode}/></div>)}
+                  {["U","R","F","B","D","L"].map(fk=><div key={fk}><FlatFace faceKey={fk} stickers={cube[fk]} onPaint={paint} onCycle={cycleSticker} painting={painting} cycleMode={cycleMode} onHover={(f,i)=>console.log(`[hover] ${f}[${i}]`)}/></div>)}
                 </div>
               )}
 
@@ -506,7 +506,23 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
             </button>
             <button onClick={()=>{
               if(kStatus!=="ready"){console.log('[test-moves] solver not ready — wait for kStatus=ready');return;}
-              console.log('[test-moves] starting single-move convention test...');
+              // ── Round-trip check: compare Kociemba-internal move vs our cubeToFacelets ──
+              console.log('[test-moves] === ROUND-TRIP COMPARISON ===');
+              for(const face of ['U','R','F','D','L','B']){
+                const kInternal=new KociembaCube().move(face).asString();
+                const ourStr=cubeToKociemba(MOVE_FN[face](initCube()));
+                if(kInternal===ourStr){
+                  console.log(`[roundtrip] ${face}: ✓ strings match`);
+                } else {
+                  const diffs=[];
+                  for(let i=0;i<54;i++) if(kInternal[i]!==ourStr[i]) diffs.push(`pos${i}(${['U','R','F','D','L','B'][i/9|0]}[${i%9}]): kociemba="${kInternal[i]}" ours="${ourStr[i]}"`);
+                  console.log(`[roundtrip] ${face}: ✗ MISMATCH — ${diffs.length} diffs`);
+                  diffs.forEach(d=>console.log('  ',d));
+                  console.log(`  kociemba: ${kInternal}`);
+                  console.log(`  ours:     ${ourStr}`);
+                }
+              }
+              console.log('[test-moves] === SOLVER TEST ===');
               const faces=['U','D','F','B','R','L'];
               const expectedInverse={"U":"U'","D":"D'","F":"F'","B":"B'","R":"R'","L":"L'"};
               let allOk=true;
@@ -525,6 +541,133 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
               else       console.log('[test-moves] ✗ SOME FACES FAIL — MOVE_FN↔Kociemba convention mismatch');
             }} style={{background:"#0d0d18",border:`1px solid ${kStatus==="ready"?"#FFD600":"#333"}`,borderRadius:6,padding:"6px 10px",color:kStatus==="ready"?"#FFD600":"#444",fontFamily:"'Courier New',monospace",fontSize:10,cursor:kStatus==="ready"?"pointer":"default",opacity:kStatus==="ready"?1:0.45}}>
               Test Moves
+            </button>
+            <button onClick={()=>{
+              localStorage.setItem('saved-scramble',JSON.stringify(cube));
+              console.log('[save-scramble] saved cube to localStorage');
+            }} style={{background:"#0d0d18",border:"1px solid #1565C0",borderRadius:6,padding:"6px 10px",color:"#1565C0",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
+              Save Scramble
+            </button>
+            <button onClick={()=>{
+              const raw=localStorage.getItem('saved-scramble');
+              if(!raw){console.log('[load-scramble] nothing saved');return;}
+              try{const loaded=JSON.parse(raw); setCube(loaded); console.log('[load-scramble]', JSON.stringify(loaded));}
+              catch(e){console.log('[load-scramble] parse error',e);}
+            }} style={{background:"#0d0d18",border:"1px solid #1565C0",borderRadius:6,padding:"6px 10px",color:"#1565C0",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
+              Load Scramble
+            </button>
+            <button onClick={()=>{
+              const moveNames={0:'U',1:'U2',2:"U'",4:'R2',7:'F2',9:'D',10:'D2',11:"D'",13:'L2',16:'B2'};
+              const phase2Indices=[0,1,2,4,7,9,10,11,13,16];
+              console.log('[test-p2-co] Testing each phase2 move for co corruption...');
+              let allOk=true;
+              for(const mv of phase2Indices){
+                const c=new KociembaCube();          // identity cube, co all zeros
+                const face=mv/3|0, power=mv%3;
+                for(let x=0;x<=power;x++) c.cornerMultiply(c.constructor.moves[face]);
+                const bad=c.co.some(v=>v!==0);
+                console.log(`[test-p2-co] ${moveNames[mv]} (idx=${mv}): co=${JSON.stringify(c.co)} ${bad?'✗ CORRUPTS ORIENTATION':'✓'}`);
+                if(bad) allOk=false;
+              }
+              if(allOk) console.log('[test-p2-co] ✓ All phase2 moves preserve co=0');
+              else       console.log('[test-p2-co] ✗ At least one phase2 move corrupts corner orientations');
+            }} style={{background:"#0d0d18",border:"1px solid #E65100",borderRadius:6,padding:"6px 10px",color:"#E65100",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
+              Test P2 Co
+            </button>
+            <button onClick={()=>{
+              const raw=localStorage.getItem('saved-scramble');
+              if(!raw){console.log('[trace-sol] no saved scramble');return;}
+              let savedCube; try{savedCube=JSON.parse(raw);}catch(e){console.log('[trace-sol] parse error',e);return;}
+              const facelets=cubeToKociemba(savedCube);
+              const kc=KociembaCube.fromString(facelets);
+              console.log('[trace-sol] start co=',JSON.stringify(kc.co));
+              const sol="R B2 U' B2 L' F R B' R F2 D R2 D2 B2 D F2 L2 D2 R2 U' L2 B2";
+              const moves=sol.trim().split(/\s+/);
+              for(const mv of moves){
+                kc.move(mv);
+                const bad=kc.co.some(v=>v!==0);
+                console.log(`[trace-sol] after ${mv.padEnd(3)}: co=${JSON.stringify(kc.co)}${bad?' *** co NON-ZERO ***':''}`);
+              }
+              console.log(`[trace-sol] final isSolved=${kc.isSolved()} co=${JSON.stringify(kc.co)} cp=${JSON.stringify(kc.cp)}`);
+            }} style={{background:"#0d0d18",border:"1px solid #9C27B0",borderRadius:6,padding:"6px 10px",color:"#9C27B0",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
+              Trace Sol
+            </button>
+            <button onClick={()=>{
+              const raw=localStorage.getItem('saved-scramble');
+              if(!raw){console.log('[diag-twist] no saved scramble');return;}
+              let savedCube; try{savedCube=JSON.parse(raw);}catch(e){console.log('[diag-twist] parse error',e);return;}
+              const facelets=cubeToKociemba(savedCube);
+              const kc=KociembaCube.fromString(facelets);
+              // Apply first 9 phase1 moves
+              const phase1Moves=["R","B2","U'","B2","L'","F","R","B'","R"];
+              console.log('[diag-twist] start co=',JSON.stringify(kc.co),'twist=',kc.twist());
+              for(const mv of phase1Moves){
+                kc.move(mv);
+                const coArr=kc.co.slice();
+                const tw=kc.twist();
+                const coAllZero=coArr.every(v=>v===0);
+                const twistImpliesCo=(() => { const t=new KociembaCube(); t.twist(tw); return t.co.slice(); })();
+                const consistent=twistImpliesCo.every((v,i)=>v===coArr[i]);
+                console.log(`[diag-twist] after ${mv.padEnd(3)}: co=${JSON.stringify(coArr)} twist=${tw} twist→co=${JSON.stringify(twistImpliesCo)} consistent=${consistent}${!consistent?' *** TWIST/CO MISMATCH ***':coAllZero?'':' (co non-zero, twist='+tw+')'}`);
+              }
+            }} style={{background:"#0d0d18",border:"1px solid #F57F17",borderRadius:6,padding:"6px 10px",color:"#F57F17",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
+              Diag Twist
+            </button>
+            <button onClick={()=>{
+              const facelets="FLBLUBRFLDLRFRRRUFDDBDFRFBBLRURDBUFLUFFLLBBDUDURUBDDUL";
+              console.log('[diag-fs] facelets=',facelets);
+              const kc=KociembaCube.fromString(facelets);
+              const coSum=kc.co.reduce((a,v)=>a+v,0);
+              console.log('[diag-fs] co=',JSON.stringify(kc.co),'sum=',coSum,'sum%3=',coSum%3,(coSum%3!==0?'*** INVALID — sum not 0 mod 3 ***':'✓ valid'));
+              console.log('[diag-fs] cp=',JSON.stringify(kc.cp));
+              // Per-corner detail: what did fromString see at each corner position?
+              const cFacelet=[[8,9,20],[6,18,38],[0,36,47],[2,45,11],[27,20,16],[26,44,24],[33,51,42],[35,17,53]]; // cornerFacelet decoded
+              const cornerNames=['URF','UFL','ULB','UBR','DFR','DLF','DBL','DRB'];
+              for(let i=0;i<=7;i++){
+                const stickers=[facelets[cFacelet[i][0]],facelets[cFacelet[i][1]],facelets[cFacelet[i][2]]];
+                let oriFound=-1;
+                for(let s=0;s<=2;s++) if(stickers[s]==='U'||stickers[s]==='D'){oriFound=s;break;}
+                console.log(`[diag-fs] corner pos ${i} (${cornerNames[i]}): stickers=${JSON.stringify(stickers)} U/D at slot=${oriFound} → co[${i}]=${kc.co[i]}${oriFound===-1?' *** NO U/D FOUND, ori=3, stored as 0 ***':''}`);
+              }
+            }} style={{background:"#0d0d18",border:"1px solid #00838F",borderRadius:6,padding:"6px 10px",color:"#00838F",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
+              Diag FromStr
+            </button>
+            <button onClick={()=>{
+              const moveLabels=['U','R','F','D','L','B'];
+              console.log('[audit-moves] Checking co arrays for Cube.moves[0..5]...');
+              let allOk=true;
+              for(let i=0;i<=5;i++){
+                const co=KociembaCube.moves[i].co;
+                const sum=co.reduce((a,v)=>a+v,0);
+                const mod=sum%3;
+                const ok=mod===0;
+                console.log(`[audit-moves] moves[${i}] (${moveLabels[i]}): co=${JSON.stringify(co)} sum=${sum} sum%3=${mod} ${ok?'✓':'✗ *** INVALID ***'}`);
+                if(!ok) allOk=false;
+              }
+              console.log(allOk?'[audit-moves] ✓ All 6 base moves have co sum divisible by 3':'[audit-moves] ✗ At least one base move has invalid co sum — this is the source of orientation corruption');
+            }} style={{background:"#0d0d18",border:"1px solid #558B2F",borderRadius:6,padding:"6px 10px",color:"#558B2F",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
+              Audit Moves
+            </button>
+            <button onClick={()=>{
+              const corners=[
+                {name:'URF', s:[['U',8],['R',0],['F',2]]},
+                {name:'UFL', s:[['U',6],['F',0],['L',2]]},
+                {name:'ULB', s:[['U',0],['L',0],['B',2]]},
+                {name:'UBR', s:[['U',2],['B',0],['R',2]]},
+                {name:'DFR', s:[['D',2],['F',8],['R',6]]},
+                {name:'DLF', s:[['D',0],['L',8],['F',6]]},
+                {name:'DBL', s:[['D',6],['B',8],['L',6]]},
+                {name:'DRB', s:[['D',8],['R',8],['B',6]]},
+              ];
+              console.log('[log-corners] Current cube corners:');
+              for(const {name,s} of corners){
+                const colors=s.map(([f,i])=>cube[f][i]);
+                const udCount=colors.filter(c=>c==='Y'||c==='W').length;
+                const label=`[${s.map(([f,i])=>`${f}[${i}]`).join(', ')}]`;
+                console.log(`[log-corners] ${name}: ${label} = [${colors.join(', ')}]${udCount!==1?' *** '+udCount+' Y/W stickers ***':''}`);
+              }
+            }} style={{background:"#0d0d18",border:"1px solid #AD1457",borderRadius:6,padding:"6px 10px",color:"#AD1457",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
+              Log Corners
             </button>
           </div>
         </div>

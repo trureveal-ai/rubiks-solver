@@ -21,9 +21,14 @@ self.onmessage = async ({ data }) => {
       ready = true;
     }
     console.log('[worker] solving facelets:', data.facelets);
-    const moves = solveFromFacelets(data.facelets);
-    console.log('[worker] solution:', moves);
-    self.postMessage({ type: 'solution', moves });
+    const result = solveFromFacelets(data.facelets);
+    if (result.parityError) {
+      console.error('[worker] parity error:', result.parityError);
+      self.postMessage({ type: 'error', message: result.parityError });
+    } else {
+      console.log('[worker] solution:', result.solution);
+      self.postMessage({ type: 'solution', moves: result.solution });
+    }
   } catch (err) {
     console.error('[worker] caught error:', err);
     self.postMessage({ type: 'error', message: err.message });
