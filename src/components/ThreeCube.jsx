@@ -170,7 +170,8 @@ function CubeScene({ stickerMap, animating, onDone, duration }) {
 
     elapsedRef.current += delta;
     const t = Math.min(elapsedRef.current / duration, 1);
-    layerGroupRef.current.rotation[animating.axis] = t * animating.angle;
+    const eased = 1 - Math.pow(1 - t, 3);  // cubic ease-out
+    layerGroupRef.current.rotation[animating.axis] = eased * animating.angle;
 
     if (elapsedRef.current >= duration) onDone?.();
   });

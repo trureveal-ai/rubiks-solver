@@ -4,11 +4,6 @@ export const NAMES = { W:"White", Y:"Yellow", B:"Blue", G:"Green", R:"Red", O:"O
 export const PAL = ["W","Y","R","O","B","G"];
 export const FLABEL = { U:"TOP", D:"BOTTOM", F:"FRONT", B:"BACK", R:"RIGHT", L:"LEFT" };
 export const FACE_COLOR = { U:"#FFD600", D:"#EFEFEF", F:"#1565C0", B:"#2E7D32", R:"#C62828", L:"#E65100" };
-export const T3D = {
-  F:"rotateY(0deg) translateZ(80px)",   B:"rotateY(180deg) translateZ(80px)",
-  R:"rotateY(90deg) translateZ(80px)",  L:"rotateY(-90deg) translateZ(80px)",
-  U:"rotateX(90deg) translateZ(80px)",  D:"rotateX(-90deg) translateZ(80px)",
-};
 export const MOVE_DESC = {
   "U":"Top CW","U'":"Top CCW","U2":"Top 180°",
   "D":"Bot CW","D'":"Bot CCW","D2":"Bot 180°",
