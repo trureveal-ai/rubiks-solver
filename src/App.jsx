@@ -99,7 +99,7 @@ export default function App() {
       {/* Header */}
       <div style={{textAlign:"center",marginBottom:22}}>
         <div style={{fontSize:9,letterSpacing:8,color:"#333",marginBottom:5}}>◈ KOCIEMBA · AI-POWERED ◈</div>
-        <div style={{fontSize:"2.4rem",fontWeight:900,letterSpacing:"-1px",lineHeight:1,background:"linear-gradient(100deg,#E65100 0%,#FFD600 30%,#2E7D32 60%,#1565C0 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>RUBIK'S<br/>SOLVER</div>
+        <div style={{fontSize:"2.4rem",fontWeight:900,letterSpacing:"-1px",lineHeight:1,background:"linear-gradient(100deg,#E65100 0%,#FFD600 30%,#2E7D32 60%,#1565C0 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>RUBIKSOLOGY</div>
       </div>
 
       {/* ══════════════ INPUT ══════════════ */}
