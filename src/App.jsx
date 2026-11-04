@@ -12,6 +12,25 @@ import ThreeCube, { MOVE_ANIM } from "./components/ThreeCube.jsx";
 import MoveBadge from "./components/MoveBadge.jsx";
 import ScrambleBanner from "./components/ScrambleBanner.jsx";
 
+// Detect WebGL support once at startup
+const hasWebGL = (() => {
+  try {
+    const c = document.createElement("canvas");
+    return !!(c.getContext("webgl2") || c.getContext("webgl") || c.getContext("experimental-webgl"));
+  } catch { return false; }
+})();
+
+function NoWebGL({ width, height }) {
+  return (
+    <div style={{width,height,background:"#07070f",borderRadius:12,display:"flex",
+      alignItems:"center",justifyContent:"center",color:"#666",
+      fontFamily:"'Courier New',monospace",fontSize:11,textAlign:"center",padding:20,
+      border:"1px solid #1a1a2e"}}>
+      3D view requires WebGL<br/>Try Chrome or enable WebGL in your browser
+    </div>
+  );
+}
+
 export default function App() {
   const [cube,setCube]               = useState(initCube);
   const [history,setHistory]         = useState([]);
@@ -433,7 +452,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
             <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
               <div style={{fontSize:9,color:"#444",letterSpacing:3,marginBottom:12}}>DRAG TO ROTATE</div>
               <div style={{marginBottom:24}}>
-                <ThreeCube cube={cube} width={360} height={360}/>
+                {hasWebGL ? <ThreeCube cube={cube} width={360} height={360}/> : <NoWebGL width={360} height={360}/>}
               </div>
               <div style={{width:"100%",background:"#08080f",border:"1px solid #1a1a2e",borderRadius:10,padding:14}}>
                 <div style={{fontSize:7,color:"#555",letterSpacing:3,marginBottom:12,textAlign:"center"}}>INTERACTIVE FACE ROTATIONS</div>
@@ -691,7 +710,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
               LIVE CUBE — {step} OF {total} MOVES APPLIED
               {highlightFace&&<span style={{color:FACE_COLOR[highlightFace]||"#FFD600",marginLeft:8}}>[ {FLABEL[highlightFace]} FACE ]</span>}
             </div>
-            <ThreeCube cube={displayCube} width={320} height={320} animTrigger={animTrigger} onAnimationDone={handleAnimDone} animDuration={SPEEDS[playSpeed].anim}/>
+            {hasWebGL ? <ThreeCube cube={displayCube} width={320} height={320} animTrigger={animTrigger} onAnimationDone={handleAnimDone} animDuration={SPEEDS[playSpeed].anim}/> : <NoWebGL width={320} height={320}/>}
             <div style={{display:"flex",gap:4,marginTop:12,flexWrap:"wrap",justifyContent:"center",maxWidth:400}}>
               {solution.steps.map((_,i)=><div key={i} onClick={()=>goStep(i+1)} style={{height:5,width:i===step-1?18:5,borderRadius:3,cursor:"pointer",background:i<step?"#E65100":i===step?"#FFD600":"#1a1a2e",transition:"all .2s"}}/>)}
             </div>
