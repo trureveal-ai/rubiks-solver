@@ -1,0 +1,32 @@
+{
+  "name": "Rubiksology",
+  "short_name": "Rubiksology",
+  "description": "AI-powered Rubik's Cube solver using the Kociemba two-phase algorithm with multi-orientation search",
+  "start_url": "/rubiks-solver/",
+  "scope": "/rubiks-solver/",
+  "display": "standalone",
+  "background_color": "#07070f",
+  "theme_color": "#07070f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["utilities", "education"]
+}
