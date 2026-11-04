@@ -311,6 +311,8 @@ const moveTableParams = {
 
 Cube.computeMoveTables = function(...tables) {
   if (!tables.length) tables=Object.keys(moveTableParams);
+  const total = tables.filter(n => this.moveTables[n] === null).length;
+  let done = 0;
   for (const name of tables) {
     if (this.moveTables[name]!==null) continue;
     if (name==='mergeURtoDF') {
@@ -321,6 +323,8 @@ Cube.computeMoveTables = function(...tables) {
       const [scope,size]=moveTableParams[name];
       this.moveTables[name]=computeMoveTable(scope,name,size);
     }
+    done++;
+    if (Cube._onProgress) Cube._onProgress({ phase: 'moveTables', table: name, done, total });
   }
   return this;
 };
@@ -396,14 +400,26 @@ const pruningTableParams = {
 
 Cube.computePruningTables = function(...tables) {
   if (!tables.length) tables=Object.keys(pruningTableParams);
+  const total = tables.filter(n => this.pruningTables[n] === null).length;
+  let done = 0;
   for (const name of tables) {
     if (this.pruningTables[name]!==null) continue;
     this.pruningTables[name]=computePruningTable(...pruningTableParams[name]);
+    done++;
+    if (Cube._onProgress) Cube._onProgress({ phase: 'pruningTables', table: name, done, total });
   }
   return this;
 };
 
-Cube.initSolver = function() { Cube.computeMoveTables(); Cube.computePruningTables(); };
+Cube.initSolver = function(onProgress) {
+  Cube._onProgress = onProgress || null;
+  Cube.computeMoveTables();
+  Cube.computePruningTables();
+  Cube._onProgress = null;
+};
+
+// Cancellation flag — set to true to abort an in-progress solve
+Cube._cancelled = false;
 
 // ─── IDA* solver ─────────────────────────────────────────────────────────────
 Cube.prototype.solveUpright = function(maxDepth=22) {
@@ -491,9 +507,14 @@ Cube.prototype.solveUpright = function(maxDepth=22) {
 
   let iters=0;
   const MAX_ITERS=5_000_000;
+  const PROGRESS_INTERVAL=50_000;
 
   function phase1(state,depth) {
+    if (Cube._cancelled) throw new Error('Solver cancelled');
     if (++iters>MAX_ITERS) throw new Error(`Solver aborted after ${MAX_ITERS} iterations`);
+    if (iters%PROGRESS_INTERVAL===0 && Cube._onSolveProgress) {
+      Cube._onSolveProgress({ iters, maxIters: MAX_ITERS });
+    }
     if (depth===0) {
       if (state.minDist1()===0) {
         if (state.lastMove===null||!allMoves2.includes(state.lastMove)) phase2search(state);
@@ -508,6 +529,7 @@ Cube.prototype.solveUpright = function(maxDepth=22) {
 
   const root=freeStates.pop().initFrom(this);
   for (let depth=1;depth<=maxDepth;depth++) {
+    if (Cube._cancelled) throw new Error('Solver cancelled');
     phase1(root,depth); if (solution!==null) break;
   }
   freeStates.push(root);
@@ -531,6 +553,78 @@ Cube.prototype.solve = function(maxDepth=22) {
   return mapped.join(' ');
 };
 
+// Try all 24 orientations to find the shortest solution
+Cube.prototype.solveMulti = function(maxDepth=22) {
+  // 24 orientations: 6 faces up × 4 rotations around vertical
+  const orientations = [
+    '', 'y', 'y2', "y'",
+    'x', 'x y', 'x y2', "x y'",
+    'x2', 'x2 y', 'x2 y2', "x2 y'",
+    "x'", "x' y", "x' y2", "x' y'",
+    'z', 'z y', 'z y2', "z y'",
+    "z'", "z' y", "z' y2", "z' y'",
+  ];
+
+  let bestSolution = null;
+  let bestLen = Infinity;
+  let tried = 0;
+
+  for (const orient of orientations) {
+    if (Cube._cancelled) throw new Error('Solver cancelled');
+    tried++;
+
+    try {
+      const clone = this.clone();
+      if (orient) clone.move(orient);
+
+      const upright = clone.upright();
+      clone.move(upright);
+
+      // Combine orientation + upright into one rotation map
+      const fullRotation = new Cube();
+      if (orient) fullRotation.move(orient);
+      fullRotation.move(upright);
+      const rotation = fullRotation.center;
+
+      // Try to solve with a depth limit of bestLen-1 (if we found anything)
+      const depthLimit = bestLen < Infinity ? bestLen - 1 : maxDepth;
+      if (depthLimit < 0) continue;
+
+      const uprightSol = clone.solveUpright(depthLimit);
+      if (uprightSol === '') {
+        // Already solved in this orientation (e.g. rotation only)
+        bestSolution = '';
+        bestLen = 0;
+        break;
+      }
+
+      const moves = uprightSol.split(' ').filter(Boolean);
+      if (moves.length < bestLen) {
+        bestLen = moves.length;
+        bestSolution = moves.map(move => {
+          const origFace = move[0];
+          const origPower = move.length > 1 ? move[1] : '';
+          const mappedFace = solveFaceNames[rotation[solveFaceNums[origFace]]];
+          return mappedFace + origPower;
+        }).join(' ');
+      }
+
+      if (Cube._onSolveProgress) {
+        Cube._onSolveProgress({ orientation: tried, totalOrientations: orientations.length, bestLen });
+      }
+
+      // If we got a very short solution, don't bother searching more
+      if (bestLen <= 18) break;
+    } catch (e) {
+      if (e.message === 'Solver cancelled') throw e;
+      // Some orientations might hit the iteration limit; skip them
+      continue;
+    }
+  }
+
+  return bestSolution !== null ? bestSolution : this.solve(maxDepth);
+};
+
 // ─── App interface ───────────────────────────────────────────────────────────
 const COLOR_MAP={Y:'U',R:'R',B:'F',W:'D',O:'L',G:'B'};
 
@@ -541,11 +635,11 @@ function cubeToFacelets(cube) {
 export function cubeToKociemba(cube) { return cubeToFacelets(cube); }
 export { Cube as KociembaCube };
 
-export function initKociemba(setStatus) {
+export function initKociemba(setStatus, onProgress) {
   setStatus('initializing');
   return new Promise((resolve,reject) => {
     setTimeout(() => {
-      try { Cube.initSolver(); setStatus('ready'); resolve(); }
+      try { Cube.initSolver(onProgress); setStatus('ready'); resolve(); }
       catch(err) { setStatus('error'); reject(err); }
     }, 0);
   });
@@ -561,7 +655,7 @@ export function solveKociemba(cube) {
 }
 
 // Used by solve.worker.js — synchronous, called after Cube.initSolver()
-export function solveFromFacelets(facelets) {
+export function solveFromFacelets(facelets, { multiOrientation = false, onProgress } = {}) {
   let c;
   try {
     c=Cube.fromString(facelets);
@@ -571,9 +665,27 @@ export function solveFromFacelets(facelets) {
     }
     throw err;
   }
-  if (c.isSolved()) return { solution: '' };
-  const result=c.solve();
-  return { solution: result };
+  if (c.isSolved()) return { solution: '', moveCount: 0 };
+
+  Cube._onSolveProgress = onProgress || null;
+  Cube._cancelled = false;
+
+  try {
+    const result = multiOrientation ? c.solveMulti() : c.solve();
+    Cube._onSolveProgress = null;
+    const moveCount = result ? result.trim().split(/\s+/).filter(Boolean).length : 0;
+    return { solution: result, moveCount };
+  } catch(err) {
+    Cube._onSolveProgress = null;
+    if (err.message === 'Solver cancelled') return { cancelled: true };
+    throw err;
+  }
+}
+
+export function cancelSolve() {
+  Cube._cancelled = true;
 }
 
 export function terminateKociemba() {}
+
+export { Cube };

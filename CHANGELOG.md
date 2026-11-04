@@ -7,6 +7,30 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.2.0] — 2026-11-04
+
+### Added
+- **Multi-orientation search** — solver tries all 24 cube orientations and returns the shortest solution found, with early termination at ≤18 moves
+- **Solver progress reporting** — live feedback during table initialization (move tables / pruning tables with percentage) and during solve (orientation count, best solution found so far, iteration count)
+- **Cancel button** — users can abort an in-progress solve and return to the input screen
+- **Phase-aware step descriptions** — solution steps are labeled as "Phase 1 — Reduce" or "Phase 2 — Solve" with numbered sub-steps within each phase
+- **Rich move explanations** — each step now shows full descriptions like "Rotate the right (R) face 90° clockwise" instead of generic "Move N" labels
+- Phase transition tips explaining G1 subgroup reduction and Phase 2 constraints
+- Solver cancel mechanism via `cancelSolve()` export from kociemba.js
+
+### Changed
+- Solver badge now shows "MULTI-ORIENTATION SEARCH" instead of "≤22 MOVES"
+- Init progress badge shows table name and percentage during Kociemba initialization
+- Solving screen shows orientation progress and best move count found so far
+- Phase 1 steps colored orange, Phase 2 steps colored blue in solution view
+- `initKociemba()` now accepts an `onProgress` callback for table build reporting
+- `solveFromFacelets()` accepts options object with `multiOrientation` and `onProgress`
+
+### Fixed
+- Solver no longer silently blocks during long solves — progress visible at all times
+
+---
+
 ## [1.1.0] — 2026-11-04
 
 ### Added
@@ -66,5 +90,6 @@ Initial release of Rubiksology.
 
 ---
 
-[1.1.0]: https://github.com/trureveal-ai/rubiks-solver/compare/a0c26bb...HEAD
+[1.2.0]: https://github.com/trureveal-ai/rubiks-solver/compare/306ce99...HEAD
+[1.1.0]: https://github.com/trureveal-ai/rubiks-solver/compare/a0c26bb...306ce99
 [1.0.0]: https://github.com/trureveal-ai/rubiks-solver/commit/a0c26bb

@@ -51,8 +51,12 @@ export default function App() {
       // setPhase after resetAnimation so it doesn't get overwritten
       anim.setPhase("solution");
     } catch (e) {
-      cs.setErr("Kociemba error — cube state may be invalid. Try re-entering colors.");
-      anim.setPhase("input");
+      if (e.message === 'cancelled') {
+        anim.setPhase("input");
+      } else {
+        cs.setErr("Kociemba error — cube state may be invalid. Try re-entering colors.");
+        anim.setPhase("input");
+      }
     }
   };
 
@@ -65,21 +69,30 @@ export default function App() {
   const total = anim.total;
   const cur = solution?.steps?.[anim.step < total ? anim.step : total - 1];
   const pct = total ? Math.round((anim.step / total) * 100) : 0;
-  const STAGE_C = {"White Cross":"#eee","White Corners":"#aaa","Middle Layer":"#FFD600","Yellow Cross":"#FFD600","Orient Yellow Corners":"#FF6D00","Position Last Layer Corners":"#C62828","Cycle Last Layer Edges":"#2E7D32","Solved!":"#2E7D32"};
-  const sc = STAGE_C[cur?.stage] || "#FF6D00";
+  const sc = cur?.stage?.startsWith("Phase 1") ? "#FF6D00" : cur?.stage?.startsWith("Phase 2") ? "#1565C0" : cur?.stage === "Solved!" ? "#2E7D32" : "#FF6D00";
   const busy = cs.scrambling || cs.animatingAlgo;
   const canSolve = !busy && cs.validationErrs.length === 0;
 
   const tabBtn = (label, key) => <button onClick={() => cs.setTab(key)} style={{flex:1,padding:"9px 0",border:"none",cursor:"pointer",fontFamily:"'Courier New',monospace",fontSize:9,letterSpacing:3,background:cs.tab===key?"#FFD600":"transparent",color:cs.tab===key?"#000":"#444",borderRadius:cs.tab===key?6:0,fontWeight:cs.tab===key?900:400,transition:"all .2s"}}>{label}</button>;
 
   const kBadge = () => {
-    const cfg = {
-      loading:      {col:"#444",   txt:"⟳ LOADING SOLVER..."},
-      initializing: {col:"#FF6D00",txt:"⟳ INITIALIZING KOCIEMBA..."},
-      ready:        {col:"#2E7D32",txt:"✓ KOCIEMBA READY (≤22 MOVES)"},
-      error:        {col:"#C62828",txt:"⚠ KOCIEMBA UNAVAILABLE"},
-    }[solver.kStatus] || {col:"#444",txt:""};
-    return <div style={{fontSize:7,color:cfg.col,letterSpacing:2,textAlign:"center",padding:"6px 10px",background:cfg.col+"11",border:`1px solid ${cfg.col}33`,borderRadius:6,marginBottom:12,transition:"all .3s"}}>{cfg.txt}</div>;
+    let col, txt;
+    if (solver.kStatus === 'initializing' && solver.initProgress) {
+      const p = solver.initProgress;
+      const phaseName = p.phase === 'moveTables' ? 'MOVE TABLES' : 'PRUNING TABLES';
+      const pct = Math.round((p.done / p.total) * 100);
+      col = "#FF6D00";
+      txt = `⟳ BUILDING ${phaseName}... ${p.done}/${p.total} (${pct}%)`;
+    } else {
+      const cfg = {
+        loading:      {col:"#444",   txt:"⟳ LOADING SOLVER..."},
+        initializing: {col:"#FF6D00",txt:"⟳ INITIALIZING KOCIEMBA..."},
+        ready:        {col:"#2E7D32",txt:"✓ KOCIEMBA READY — MULTI-ORIENTATION SEARCH"},
+        error:        {col:"#C62828",txt:"⚠ KOCIEMBA UNAVAILABLE"},
+      }[solver.kStatus] || {col:"#444",txt:""};
+      col = cfg.col; txt = cfg.txt;
+    }
+    return <div style={{fontSize:7,color:col,letterSpacing:2,textAlign:"center",padding:"6px 10px",background:col+"11",border:`1px solid ${col}33`,borderRadius:6,marginBottom:12,transition:"all .3s"}}>{txt}</div>;
   };
 
   return (
@@ -114,7 +127,7 @@ export default function App() {
           )}
           {solver.kStatus==="ready" && (
             <div style={{fontSize:8,color:"#2E7D32",textAlign:"center",marginBottom:12,letterSpacing:1,padding:"8px",background:"#2E7D3210",border:"1px solid #2E7D3233",borderRadius:8}}>
-              Solver ready — guarantees ≤22 moves for any valid state.
+              Solver ready — searches 24 orientations for the shortest solution.
             </div>
           )}
 
@@ -223,9 +236,27 @@ export default function App() {
 
       {/* ══════════════ SOLVING ══════════════ */}
       {anim.phase==="solving" && (
-        <div style={{textAlign:"center",padding:"80px 0"}}>
+        <div style={{textAlign:"center",padding:"60px 0",maxWidth:400,margin:"0 auto"}}>
           <div style={{width:60,height:60,margin:"0 auto 20px",borderRadius:"50%",border:"3px solid #1a1a2e",borderTop:"3px solid #FFD600",borderRight:"3px solid #E65100",animation:"spin .8s linear infinite"}}/>
-          <div style={{fontSize:10,letterSpacing:6,color:"#444",animation:"pulse 1.4s ease infinite"}}>SOLVING...</div>
+          <div style={{fontSize:10,letterSpacing:6,color:"#444",animation:"pulse 1.4s ease infinite",marginBottom:16}}>SOLVING...</div>
+          {solver.solveProgress && (
+            <div style={{background:"#0d0d18",border:"1px solid #1a1a2e",borderRadius:10,padding:16,marginBottom:16}}>
+              {solver.solveProgress.orientation && (
+                <div style={{fontSize:8,color:"#FFD600",letterSpacing:2,marginBottom:8}}>
+                  ORIENTATION {solver.solveProgress.orientation} / {solver.solveProgress.totalOrientations}
+                  {solver.solveProgress.bestLen < Infinity && (
+                    <span style={{color:"#2E7D32",marginLeft:8}}>BEST: {solver.solveProgress.bestLen} MOVES</span>
+                  )}
+                </div>
+              )}
+              {solver.solveProgress.iters && (
+                <div style={{fontSize:8,color:"#555",letterSpacing:1}}>
+                  {(solver.solveProgress.iters / 1000).toFixed(0)}K iterations
+                </div>
+              )}
+            </div>
+          )}
+          <button onClick={()=>{solver.cancel();anim.setPhase("input");}} style={{background:"transparent",border:"1px solid #C62828",borderRadius:8,padding:"10px 24px",color:"#C62828",fontFamily:"'Courier New',monospace",fontSize:9,letterSpacing:3,cursor:"pointer"}}>✕ CANCEL</button>
         </div>
       )}
 
