@@ -79,7 +79,9 @@ export default function useSolver() {
   const [kStatus, setKStatus] = useState("loading");
   const [initProgress, setInitProgress] = useState(null);
   const [solveProgress, setSolveProgress] = useState(null);
+  const [solveStats, setSolveStats] = useState(null);
   const solvingRef = useRef(false);
+  const solveStartRef = useRef(0);
 
   // Initialize solver via persistent worker
   useEffect(() => {
@@ -109,6 +111,8 @@ export default function useSolver() {
   const solve = useCallback(async (cube) => {
     solvingRef.current = true;
     setSolveProgress(null);
+    setSolveStats(null);
+    solveStartRef.current = performance.now();
 
     const facelets = cubeToKociemba(cube);
     const result = await new Promise((resolve, reject) => {
@@ -136,11 +140,19 @@ export default function useSolver() {
       solverWorker.postMessage({ type: 'solve', facelets, multiOrientation: true });
     });
 
+    const solveTime = performance.now() - solveStartRef.current;
     const moves = result.moves ? result.moves.trim().split(/\s+/).filter(Boolean) : [];
     const steps = categorizeSteps(moves);
 
+    const stats = {
+      solveTimeMs: Math.round(solveTime),
+      moveCount: moves.length,
+      orientationsSearched: result.moveCount ? 24 : 1,
+    };
+    setSolveStats(stats);
+
     return {
-      solution: { totalMoves: moves.length, steps },
+      solution: { totalMoves: moves.length, steps, stats },
       startCube: copyCube(cube),
     };
   }, []);
@@ -151,5 +163,5 @@ export default function useSolver() {
     }
   }, []);
 
-  return { kStatus, solve, cancel, initProgress, solveProgress };
+  return { kStatus, solve, cancel, initProgress, solveProgress, solveStats };
 }

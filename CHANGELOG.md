@@ -7,6 +7,31 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.3.0] — 2026-11-04
+
+### Added
+- **Mobile responsiveness** — fluid layout using `clamp()`, `max-width: 100%`, and `aspect-ratio` replaces all hardcoded pixel widths; app works from 320px phones to ultrawide monitors
+- **Touch support** — `onTouchStart` handlers on sticker cells prevent double-tap zoom and enable reliable painting/cycling on mobile; `touchAction: manipulation` and `-webkit-tap-highlight-color: transparent` throughout
+- **Keyboard shortcuts** — Arrow keys step through solution, Space toggles auto-play, Home/End jump to start/end; hint displayed below speed controls
+- **Solve timer** — `performance.now()` measures wall-clock solve time; displayed as "SOLVE TIME" stat alongside move count and phase
+- **Copy solution** — 📋 COPY button in solution view writes full move sequence to clipboard with toast confirmation
+- **Progress ring** — circular SVG progress indicator replaces the implicit progress-bar feel; shows percentage with color shift (yellow → green at 100%)
+- **Toast notification system** — temporary bottom-of-screen feedback for clipboard and other actions
+
+### Changed
+- Solution stats panel redesigned: progress ring + 2×2 grid layout with solve time, move count, total, and phase
+- Color palette dots use `clamp()` sizing for responsive touch targets
+- 3D cube container uses `aspect-ratio: 1` instead of fixed pixel dimensions
+- All interactive elements have `WebkitTapHighlightColor: transparent` for clean mobile taps
+- Step card shows COPY button alongside phase badge
+- Keyboard hint text below speed controls: "← → STEP · SPACE PLAY · HOME END"
+
+### Fixed
+- Layout overflow on narrow screens — no more horizontal scroll below ~530px
+- Dot navigation in solution view wraps gracefully on small screens
+
+---
+
 ## [1.2.0] — 2026-11-04
 
 ### Added
@@ -90,6 +115,7 @@ Initial release of Rubiksology.
 
 ---
 
-[1.2.0]: https://github.com/trureveal-ai/rubiks-solver/compare/306ce99...HEAD
+[1.3.0]: https://github.com/trureveal-ai/rubiks-solver/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/trureveal-ai/rubiks-solver/compare/306ce99...v1.2.0
 [1.1.0]: https://github.com/trureveal-ai/rubiks-solver/compare/a0c26bb...306ce99
 [1.0.0]: https://github.com/trureveal-ai/rubiks-solver/commit/a0c26bb
