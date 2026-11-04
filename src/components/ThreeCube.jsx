@@ -1,7 +1,24 @@
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, Component } from "react";
 import { C } from "../engine/cube.js";
+
+// ── WebGL error boundary ────────────────────────────────────────────────────
+class WebGLErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { failed: false }; }
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err) { console.warn('[ThreeCube] WebGL unavailable:', err.message); }
+  render() {
+    if (this.state.failed) return (
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',
+        width:'100%',height:'100%',color:'#888',fontFamily:"'Courier New',monospace",
+        fontSize:11,textAlign:'center',padding:20}}>
+        3D view unavailable<br/>(WebGL not supported)
+      </div>
+    );
+    return this.props.children;
+  }
+}
 
 // Axis / face mapping (matches cube.js orientation):
 //   U = +Y,  D = -Y,  F = +Z,  B = -Z,  R = +X,  L = -X
@@ -206,21 +223,23 @@ export default function ThreeCube({ cube, width = 340, height = 340, animTrigger
 
   return (
     <div style={{ width, height, background: "#07070f", borderRadius: 12 }}>
-      <Canvas
-        camera={{ position: [3.5, 2.8, 6.5], fov: 42 }}
-        style={{ borderRadius: 12 }}
-      >
-        <ambientLight intensity={0.55} />
-        <directionalLight position={[5, 8, 5]} intensity={0.9} />
-        <directionalLight position={[-4, -4, -4]} intensity={0.2} />
+      <WebGLErrorBoundary>
+        <Canvas
+          camera={{ position: [3.5, 2.8, 6.5], fov: 42 }}
+          style={{ borderRadius: 12 }}
+        >
+          <ambientLight intensity={0.55} />
+          <directionalLight position={[5, 8, 5]} intensity={0.9} />
+          <directionalLight position={[-4, -4, -4]} intensity={0.2} />
 
-        <CubeScene
-          stickerMap={stickerMap}
-          animating={animating}
-          onDone={handleDone}
-          duration={animDuration}
-        />
-      </Canvas>
+          <CubeScene
+            stickerMap={stickerMap}
+            animating={animating}
+            onDone={handleDone}
+            duration={animDuration}
+          />
+        </Canvas>
+      </WebGLErrorBoundary>
 
       {/* Test buttons — one per face */}
       <div style={{ display: "flex", gap: 4, justifyContent: "center", marginTop: 8 }}>
