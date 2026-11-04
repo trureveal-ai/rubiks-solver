@@ -309,6 +309,11 @@ export default function App() {
           <button onClick={reset} style={{width:"100%",background:"transparent",border:"1px solid #1a1a2e",borderRadius:8,padding:11,color:"#444",fontFamily:"'Courier New',monospace",fontSize:9,letterSpacing:3,cursor:"pointer"}}>◂ START OVER</button>
         </div>
       )}
+
+      {/* Version */}
+      <div style={{marginTop:40,fontSize:7,color:"#1a1a2e",letterSpacing:3,textAlign:"center"}}>
+        RUBIKSOLOGY v{__APP_VERSION__}
+      </div>
     </div>
   );
 }
