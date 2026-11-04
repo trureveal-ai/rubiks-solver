@@ -5,7 +5,7 @@ import {
   generateScramble, applyMoveString, replayToCube,
 } from "./engine/cube.js";
 import { validateCube } from "./engine/validate.js";
-import { initKociemba, cubeToKociemba, terminateKociemba, KociembaCube } from "./engine/kociemba.js";
+import { initKociemba, cubeToKociemba, terminateKociemba } from "./engine/kociemba.js";
 import Cell from "./components/Cell.jsx";
 import FlatFace from "./components/FlatFace.jsx";
 import ThreeCube, { MOVE_ANIM } from "./components/ThreeCube.jsx";
@@ -65,26 +65,25 @@ export default function App() {
   const [validationErrs,setValidationErrs] = useState([]);
 
   const [kStatus,setKStatus]         = useState("loading"); // loading | initializing | ready | error
-  const [solveMode,setSolveMode]     = useState("optimal"); // optimal | ai
+
+  // Paint-screen 3D animation state
+  const [paintAnimTrigger,setPaintAnimTrigger] = useState(null);
+  const [paintPendingMove,setPaintPendingMove] = useState(null);
+  const paintAnimKeyRef = useRef(0);
 
   // ── Load Kociemba solver ────────────────────────────────────────
   useEffect(()=>{
     let mounted=true;
     initKociemba(status=>{
-      console.log('[App] kStatus callback:', status, '| mounted:', mounted);
       if(mounted)setKStatus(status);
     }).catch((e)=>{
       console.error('[App] initKociemba rejected:', e);
-      if(mounted){setKStatus("error");setSolveMode("ai");}
+      if(mounted)setKStatus("error");
     });
     return()=>{
-      console.log('[App] useEffect cleanup — terminating worker, mounted→false');
       mounted=false; terminateKociemba();
     };
   },[]);
-
-  // Track every kStatus change
-  useEffect(()=>{console.log('[App] kStatus changed to:', kStatus);},[kStatus]);
 
   // ── Computed ───────────────────────────────────────────────────
   const highlightFace = useMemo(()=>{
@@ -116,6 +115,24 @@ export default function App() {
   const undo=()=>{if(!history.length)return;setCube(history[history.length-1]);setHistory(h=>h.slice(0,-1));};
   const doMove=useCallback((move)=>{if(!MOVE_FN[move])return;setCube(prev=>{setHistory(h=>[...h.slice(-49),prev]);return MOVE_FN[move](prev);});},[]);
 
+  // Animated move for 3D interactive buttons on paint screen
+  const doMoveAnimated=useCallback((move)=>{
+    if(!MOVE_FN[move]||paintPendingMove) return;
+    setPaintPendingMove(move);
+    paintAnimKeyRef.current+=1;
+    setPaintAnimTrigger({move,key:paintAnimKeyRef.current});
+  },[paintPendingMove]);
+
+  const handlePaintAnimDone=useCallback(()=>{
+    setPaintAnimTrigger(null);
+    setPaintPendingMove(prev=>{
+      if(prev&&MOVE_FN[prev]){
+        setCube(c=>{setHistory(h=>[...h.slice(-49),c]);return MOVE_FN[prev](c);});
+      }
+      return null;
+    });
+  },[]);
+
   const applyAlgo=()=>{
     const moves=algoInput.trim().split(/\s+/).filter(Boolean);
     const bad=moves.filter(m=>!MOVE_FN[m]);
@@ -143,34 +160,6 @@ export default function App() {
     return()=>clearTimeout(id);
   },[step,playSpeed]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Solution validation diagnostics ────────────────────────────
-  useEffect(()=>{
-    if(phase!=="solution"||!solution||!displayCube) return;
-    const t=solution.steps.length;
-    if(step!==t||pendingStep!==null) return;
-    const solved=initCube();
-    console.log('[solved-check] displayCube:', JSON.parse(JSON.stringify(displayCube)));
-    console.log('[solved-check] expected (initCube):', JSON.parse(JSON.stringify(solved)));
-    let allOk=true;
-    for(const face of ['U','D','F','B','R','L']){
-      const got=displayCube[face];
-      const exp=solved[face];
-      const center=got[4];
-      for(let i=0;i<9;i++){
-        if(got[i]!==center){
-          console.log(`[solved-check] Face ${face}[${i}]: center=${center}, sticker=${got[i]} — not uniform`);
-          allOk=false;
-        }
-        if(got[i]!==exp[i]){
-          console.log(`[solved-check] Face ${face}[${i}]: expected=${exp[i]}, got=${got[i]}`);
-          allOk=false;
-        }
-      }
-    }
-    if(allOk) console.log('[solved-check] ✓ Cube is fully solved');
-    else console.log('[solved-check] ✗ Cube is NOT solved — see mismatches above');
-  },[step,pendingStep]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Scramble ───────────────────────────────────────────────────
   const handleScramble=async()=>{
     setScrambling(true);setErr("");setScrambleSeq(null);setHistory([]);
@@ -182,52 +171,27 @@ export default function App() {
 
   // ── Solve: Kociemba optimal ────────────────────────────────────
   const handleSolveKociemba=async()=>{
-    console.log('[App] handleSolveKociemba START');
     setPhase("solving");setErr("");
     try {
-      console.log('[App] raw cube →', JSON.stringify(cube));
       const facelets=cubeToKociemba(cube);
-      console.log('[App] spawning solve worker...');
       const solutionStr=await new Promise((resolve,reject)=>{
         const worker=new Worker(new URL('./engine/solve.worker.js',import.meta.url),{type:'module'});
-        console.log('[App] worker object created:', worker);
         worker.onmessage=({data})=>{
-          console.log('[App] worker message received:', data);
           worker.terminate();
           if(data.type==='solution') resolve(data.moves);
           else reject(new Error(data.message||'Worker error'));
         };
-        worker.onmessageerror=e=>{
-          console.error('[App] worker message error (deserialization?):', e);
-          worker.terminate();reject(new Error('Worker message error'));
-        };
         worker.onerror=e=>{
-          console.error('[App] worker onerror:', e.message, e.filename, e.lineno, e);
           worker.terminate();reject(e);
         };
-        console.log('[App] posting solve message, facelets length:', facelets.length);
         worker.postMessage({type:'solve',facelets});
       });
-      console.log('[App] solve worker resolved, solutionStr:', solutionStr);
       const moves=solutionStr?solutionStr.trim().split(/\s+/).filter(Boolean):[];
 
       if(moves.length===0){
         setSolution({totalMoves:0,steps:[{n:1,stage:"Solved!",move:"",explain:"Your cube is already solved!",tip:""}]});
         setStartCube(copyCube(cube));setStep(0);setAnimIdx(0);setPhase("solution");
         return;
-      }
-
-      // ── Verify solution against MOVE_FN ──────────────────────────
-      {
-        let v=copyCube(cube);
-        moves.forEach(m=>{if(MOVE_FN[m])v=MOVE_FN[m](v);});
-        const expected=initCube();
-        let ok=true;
-        for(const face of ['U','D','F','B','R','L']){
-          v[face].forEach((c,i)=>{if(c!==expected[face][i]){console.log(`[verify] MISMATCH Face ${face}[${i}]: expected=${expected[face][i]}, got=${c}`);ok=false;}});
-        }
-        if(ok) console.log('[verify] ✓ VERIFY PASS — solution moves applied to input cube yield solved state');
-        else{console.log('[verify] ✗ VERIFY FAIL — final state:',JSON.parse(JSON.stringify(v)));console.log('[verify] expected:',JSON.parse(JSON.stringify(expected)));}
       }
 
       const steps=moves.map((m,i)=>({
@@ -247,43 +211,11 @@ export default function App() {
     }
   };
 
-  // ── Solve: AI beginner ─────────────────────────────────────────
-  const solveAI=async()=>{
-    setPhase("solving");setErr("");
-    try {
-      const state=Object.entries(cube).map(([f,s])=>`${FLABEL[f]} (${f}): ${s.join(" ")}`).join("\n");
-      const prompt=`You are a Rubik's cube expert. Solve this cube using the beginner layer-by-layer method.
-
-CUBE STATE (9 stickers per face, left→right top→bottom):
-${state}
-
-Colors: W=White Y=Yellow B=Blue(front) G=Green(back) R=Red(right) O=Orange(left)
-Orientation: Y=Top(U) W=Bottom(D) B=Front(F) G=Back(B) R=Right(R) O=Left(L)
-
-Stages: 1.White Cross 2.White Corners 3.Middle Layer 4.Yellow Cross 5.Orient Yellow Corners 6.Position Last Layer Corners 7.Cycle Last Layer Edges
-
-Return ONLY valid JSON, no markdown or backticks:
-{"totalMoves":<int>,"steps":[{"n":1,"stage":"<name>","move":"<e.g. R U R' U'>","explain":"<plain English>","tip":"<beginner tip or empty>"}]}
-
-If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","explain":"Your cube is already solved!","tip":""}]}`;
-
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
-      const data=await res.json();
-      const raw=data.content.filter(b=>b.type==="text").map(b=>b.text).join("");
-      const parsed=JSON.parse(raw.replace(/```json|```/g,"").trim());
-      setSolution(parsed);setStartCube(copyCube(cube));setStep(0);setAnimIdx(0);setPhase("solution");
-    } catch(e) {
-      setErr("Couldn't parse solution — verify all 54 stickers are correctly set.");setPhase("input");
-    }
-  };
-
   const solve=()=>{
-    console.log('[App] SOLVE clicked — solveMode:', solveMode, '| kStatus:', kStatus, '| canSolve:', canSolve);
-    solveMode==="optimal"&&kStatus==="ready" ? handleSolveKociemba() : solveAI();
+    handleSolveKociemba();
   };
 
   const goStep=n=>{
-    console.log("goStep called with n="+n+", current step="+step+", pendingStep="+pendingStep);
     // step = moves completed. Advancing to n=step+1 plays steps[step] (the next move).
     if(n===step+1 && solution){
       const move=solution.steps[step]?.move?.trim()??"";
@@ -301,7 +233,6 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
   };
 
   const handleAnimDone=()=>{
-    console.log("animDone, step="+step+", playingRef="+playingRef.current);
     if(pendingStep!==null){
       setStep(pendingStep);
       setAnimIdx(a=>a+1);
@@ -357,26 +288,14 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
         <div style={{width:"100%",maxWidth:530}}>
           {kBadge()}
 
-          {/* Solve mode toggle */}
-          <div style={{display:"flex",background:"#0d0d18",border:"1px solid #1a1a2e",borderRadius:8,marginBottom:14,padding:3,gap:3}}>
-            {[["⚡ OPTIMAL (KOCIEMBA)","optimal"],["📖 BEGINNER (AI)","ai"]].map(([label,key])=>(
-              <button key={key} onClick={()=>setSolveMode(key)} style={{flex:1,padding:"8px 0",border:"none",cursor:"pointer",fontFamily:"'Courier New',monospace",fontSize:8,letterSpacing:2,background:solveMode===key?"#FFD600":"transparent",color:solveMode===key?"#000":"#444",borderRadius:solveMode===key?6:0,fontWeight:solveMode===key?900:400,transition:"all .2s"}}>{label}</button>
-            ))}
-          </div>
-
-          {solveMode==="optimal" && kStatus!=="ready" && (
+          {kStatus!=="ready" && (
             <div style={{fontSize:8,color:"#FF6D00",textAlign:"center",marginBottom:12,letterSpacing:1,padding:"8px",background:"#FF6D0010",border:"1px solid #FF6D0033",borderRadius:8}}>
-              {kStatus==="error" ? "Kociemba failed to load — switch to Beginner mode or retry by refreshing." : "Please wait for Kociemba to finish initializing before solving."}
+              {kStatus==="error" ? "Solver failed to load — try refreshing the page." : "Please wait for the solver to finish initializing..."}
             </div>
           )}
-          {solveMode==="optimal" && kStatus==="ready" && (
+          {kStatus==="ready" && (
             <div style={{fontSize:8,color:"#2E7D32",textAlign:"center",marginBottom:12,letterSpacing:1,padding:"8px",background:"#2E7D3210",border:"1px solid #2E7D3233",borderRadius:8}}>
-              Kociemba guarantees ≤22 moves for any valid state.
-            </div>
-          )}
-          {solveMode==="ai" && (
-            <div style={{fontSize:8,color:"#888",textAlign:"center",marginBottom:12,letterSpacing:1,padding:"8px",background:"#ffffff08",border:"1px solid #1a1a2e",borderRadius:8}}>
-              AI beginner method — step-by-step with explanations (60–80 moves typical).
+              Solver ready — guarantees ≤22 moves for any valid state.
             </div>
           )}
 
@@ -452,7 +371,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
             <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
               <div style={{fontSize:9,color:"#444",letterSpacing:3,marginBottom:12}}>DRAG TO ROTATE</div>
               <div style={{marginBottom:24}}>
-                {hasWebGL ? <ThreeCube cube={cube} width={360} height={360}/> : <NoWebGL width={360} height={360}/>}
+                {hasWebGL ? <ThreeCube cube={cube} width={360} height={360} animTrigger={paintAnimTrigger} onAnimationDone={handlePaintAnimDone} animDuration={0.35}/> : <NoWebGL width={360} height={360}/>}
               </div>
               <div style={{width:"100%",background:"#08080f",border:"1px solid #1a1a2e",borderRadius:10,padding:14}}>
                 <div style={{fontSize:7,color:"#555",letterSpacing:3,marginBottom:12,textAlign:"center"}}>INTERACTIVE FACE ROTATIONS</div>
@@ -461,7 +380,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
                     <div key={face} style={{background:"#0d0d18",border:`1px solid ${col}22`,borderRadius:8,padding:"8px 4px"}}>
                       <div style={{fontSize:8,color:col,letterSpacing:3,marginBottom:7,textAlign:"center",fontWeight:900}}>{FLABEL[face]}</div>
                       <div style={{display:"flex",gap:3,justifyContent:"center"}}>
-                        {[face,face+"'",face+"2"].map(m=><button key={m} onClick={()=>doMove(m)} style={{flex:1,background:"#1a1a2e",border:`1px solid ${col}33`,borderRadius:4,padding:"6px 2px",cursor:"pointer",fontFamily:"'Courier New',monospace",fontWeight:900,fontSize:"0.72rem",color:col,minWidth:0}}>{m}</button>)}
+                        {[face,face+"'",face+"2"].map(m=><button key={m} onClick={()=>doMoveAnimated(m)} disabled={!!paintPendingMove} style={{flex:1,background:"#1a1a2e",border:`1px solid ${col}33`,borderRadius:4,padding:"6px 2px",cursor:paintPendingMove?"default":"pointer",fontFamily:"'Courier New',monospace",fontWeight:900,fontSize:"0.72rem",color:paintPendingMove?col+"66":col,minWidth:0}}>{m}</button>)}
                       </div>
                     </div>
                   ))}
@@ -477,217 +396,8 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
             <button onClick={handleScramble} disabled={busy} style={{background:busy?"#0d0d18":"linear-gradient(135deg,#1565C0,#2E7D32)",border:busy?"1px solid #1a1a2e":"none",borderRadius:8,padding:"14px 20px",color:busy?"#444":"#fff",fontFamily:"'Courier New',monospace",fontWeight:900,fontSize:"0.85rem",letterSpacing:3,cursor:busy?"default":"pointer",animation:scrambling?"flash .5s ease infinite":"none"}}>
               {scrambling?"⟳ SCRAMBLING...":"🎲 SCRAMBLE"}
             </button>
-            <button onClick={solve} disabled={!canSolve||(solveMode==="optimal"&&kStatus!=="ready")} style={{background:(!canSolve||(solveMode==="optimal"&&kStatus!=="ready"))?"#0d0d18":"linear-gradient(135deg,#E65100,#FFD600)",border:(!canSolve||(solveMode==="optimal"&&kStatus!=="ready"))?"1px solid #1a1a2e":"none",borderRadius:8,padding:"14px 34px",color:(!canSolve||(solveMode==="optimal"&&kStatus!=="ready"))?"#333":"#000",fontFamily:"'Courier New',monospace",fontWeight:900,fontSize:"1rem",letterSpacing:4,cursor:"pointer",transition:"all .2s"}}>▶ SOLVE</button>
+            <button onClick={solve} disabled={!canSolve||kStatus!=="ready"} style={{background:(!canSolve||kStatus!=="ready")?"#0d0d18":"linear-gradient(135deg,#E65100,#FFD600)",border:(!canSolve||kStatus!=="ready")?"1px solid #1a1a2e":"none",borderRadius:8,padding:"14px 34px",color:(!canSolve||kStatus!=="ready")?"#333":"#000",fontFamily:"'Courier New',monospace",fontWeight:900,fontSize:"1rem",letterSpacing:4,cursor:"pointer",transition:"all .2s"}}>▶ SOLVE</button>
             <button onClick={reset} disabled={busy} style={{background:"transparent",border:"1px solid #1a1a2e",borderRadius:8,padding:"14px 18px",color:"#444",fontFamily:"'Courier New',monospace",fontSize:9,letterSpacing:3,cursor:"pointer"}}>RESET</button>
-          </div>
-          <div style={{display:"flex",gap:6,marginTop:10,justifyContent:"center",flexWrap:"wrap"}}>
-            {['U','D','F','B','R','L'].map(m=>(
-              <button key={m} onClick={()=>{
-                const after=MOVE_FN[m](initCube());
-                console.log(`[debug] ${m} move on solved cube → facelets: ${cubeToKociemba(after)}`);
-              }} style={{background:"#0d0d18",border:"1px solid #333",borderRadius:6,padding:"6px 10px",color:"#aaa",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
-                dbg {m}
-              </button>
-            ))}
-            <button onClick={()=>{
-              const seq=["D","R","L","D","R2","B","L2","D"];
-              let c=initCube();
-              for(const m of seq){
-                c=MOVE_FN[m](c);
-                const facelets=cubeToKociemba(c);
-                const kc=KociembaCube.fromString(facelets);
-                console.log(`[debug] after ${m}: ep=[${kc.ep.join(',')}]`);
-              }
-            }} style={{background:"#0d0d18",border:"1px solid #C62828",borderRadius:6,padding:"6px 10px",color:"#C62828",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
-              dbg seq
-            </button>
-            <button onClick={()=>{
-              // R U R' U' has order 6 — applying it 6× returns to solved.
-              const seq=["R","U","R'","U'"];
-              const reps=6;
-              let c=initCube();
-              for(let i=0;i<reps;i++) seq.forEach(m=>{c=MOVE_FN[m](c);});
-              const expected=initCube();
-              let allOk=true;
-              for(const face of ['U','D','F','B','R','L']){
-                const got=c[face]; const exp=expected[face];
-                for(let i=0;i<9;i++){
-                  if(got[i]!==exp[i]){
-                    console.log(`[test-solve] FAIL Face ${face}[${i}]: expected=${exp[i]}, got=${got[i]}`);
-                    allOk=false;
-                  }
-                }
-              }
-              if(allOk) console.log('[test-solve] ✓ PASS — R U R\' U\' ×6 returns to solved');
-              else console.log('[test-solve] ✗ FAIL — move functions are inconsistent');
-            }} style={{background:"#0d0d18",border:"1px solid #2E7D32",borderRadius:6,padding:"6px 10px",color:"#2E7D32",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
-              Test Solve
-            </button>
-            <button onClick={()=>{
-              if(kStatus!=="ready"){console.log('[test-moves] solver not ready — wait for kStatus=ready');return;}
-              // ── Round-trip check: compare Kociemba-internal move vs our cubeToFacelets ──
-              console.log('[test-moves] === ROUND-TRIP COMPARISON ===');
-              for(const face of ['U','R','F','D','L','B']){
-                const kInternal=new KociembaCube().move(face).asString();
-                const ourStr=cubeToKociemba(MOVE_FN[face](initCube()));
-                if(kInternal===ourStr){
-                  console.log(`[roundtrip] ${face}: ✓ strings match`);
-                } else {
-                  const diffs=[];
-                  for(let i=0;i<54;i++) if(kInternal[i]!==ourStr[i]) diffs.push(`pos${i}(${['U','R','F','D','L','B'][i/9|0]}[${i%9}]): kociemba="${kInternal[i]}" ours="${ourStr[i]}"`);
-                  console.log(`[roundtrip] ${face}: ✗ MISMATCH — ${diffs.length} diffs`);
-                  diffs.forEach(d=>console.log('  ',d));
-                  console.log(`  kociemba: ${kInternal}`);
-                  console.log(`  ours:     ${ourStr}`);
-                }
-              }
-              console.log('[test-moves] === SOLVER TEST ===');
-              const faces=['U','D','F','B','R','L'];
-              const expectedInverse={"U":"U'","D":"D'","F":"F'","B":"B'","R":"R'","L":"L'"};
-              let allOk=true;
-              for(const face of faces){
-                const after=MOVE_FN[face](initCube());
-                const facelets=cubeToKociemba(after);
-                const kc=KociembaCube.fromString(facelets);
-                const sol=kc.solve();
-                const moves=sol?sol.trim().split(/\s+/).filter(Boolean):[];
-                const exp=expectedInverse[face];
-                const pass=moves.length===1&&sol.trim()===exp;
-                console.log(`[test-moves] ${face}: solution="${sol||'(empty)'}" expected="${exp}" moves=${moves.length} → ${pass?'✓ PASS':'✗ FAIL'}`);
-                if(!pass) allOk=false;
-              }
-              if(allOk) console.log('[test-moves] ✓ ALL 6 FACES PASS — MOVE_FN conventions match Kociemba');
-              else       console.log('[test-moves] ✗ SOME FACES FAIL — MOVE_FN↔Kociemba convention mismatch');
-            }} style={{background:"#0d0d18",border:`1px solid ${kStatus==="ready"?"#FFD600":"#333"}`,borderRadius:6,padding:"6px 10px",color:kStatus==="ready"?"#FFD600":"#444",fontFamily:"'Courier New',monospace",fontSize:10,cursor:kStatus==="ready"?"pointer":"default",opacity:kStatus==="ready"?1:0.45}}>
-              Test Moves
-            </button>
-            <button onClick={()=>{
-              localStorage.setItem('saved-scramble',JSON.stringify(cube));
-              console.log('[save-scramble] saved cube to localStorage');
-            }} style={{background:"#0d0d18",border:"1px solid #1565C0",borderRadius:6,padding:"6px 10px",color:"#1565C0",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
-              Save Scramble
-            </button>
-            <button onClick={()=>{
-              const raw=localStorage.getItem('saved-scramble');
-              if(!raw){console.log('[load-scramble] nothing saved');return;}
-              try{const loaded=JSON.parse(raw); setCube(loaded); console.log('[load-scramble]', JSON.stringify(loaded));}
-              catch(e){console.log('[load-scramble] parse error',e);}
-            }} style={{background:"#0d0d18",border:"1px solid #1565C0",borderRadius:6,padding:"6px 10px",color:"#1565C0",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
-              Load Scramble
-            </button>
-            <button onClick={()=>{
-              const moveNames={0:'U',1:'U2',2:"U'",4:'R2',7:'F2',9:'D',10:'D2',11:"D'",13:'L2',16:'B2'};
-              const phase2Indices=[0,1,2,4,7,9,10,11,13,16];
-              console.log('[test-p2-co] Testing each phase2 move for co corruption...');
-              let allOk=true;
-              for(const mv of phase2Indices){
-                const c=new KociembaCube();          // identity cube, co all zeros
-                const face=mv/3|0, power=mv%3;
-                for(let x=0;x<=power;x++) c.cornerMultiply(c.constructor.moves[face]);
-                const bad=c.co.some(v=>v!==0);
-                console.log(`[test-p2-co] ${moveNames[mv]} (idx=${mv}): co=${JSON.stringify(c.co)} ${bad?'✗ CORRUPTS ORIENTATION':'✓'}`);
-                if(bad) allOk=false;
-              }
-              if(allOk) console.log('[test-p2-co] ✓ All phase2 moves preserve co=0');
-              else       console.log('[test-p2-co] ✗ At least one phase2 move corrupts corner orientations');
-            }} style={{background:"#0d0d18",border:"1px solid #E65100",borderRadius:6,padding:"6px 10px",color:"#E65100",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
-              Test P2 Co
-            </button>
-            <button onClick={()=>{
-              const raw=localStorage.getItem('saved-scramble');
-              if(!raw){console.log('[trace-sol] no saved scramble');return;}
-              let savedCube; try{savedCube=JSON.parse(raw);}catch(e){console.log('[trace-sol] parse error',e);return;}
-              const facelets=cubeToKociemba(savedCube);
-              const kc=KociembaCube.fromString(facelets);
-              console.log('[trace-sol] start co=',JSON.stringify(kc.co));
-              const sol="R B2 U' B2 L' F R B' R F2 D R2 D2 B2 D F2 L2 D2 R2 U' L2 B2";
-              const moves=sol.trim().split(/\s+/);
-              for(const mv of moves){
-                kc.move(mv);
-                const bad=kc.co.some(v=>v!==0);
-                console.log(`[trace-sol] after ${mv.padEnd(3)}: co=${JSON.stringify(kc.co)}${bad?' *** co NON-ZERO ***':''}`);
-              }
-              console.log(`[trace-sol] final isSolved=${kc.isSolved()} co=${JSON.stringify(kc.co)} cp=${JSON.stringify(kc.cp)}`);
-            }} style={{background:"#0d0d18",border:"1px solid #9C27B0",borderRadius:6,padding:"6px 10px",color:"#9C27B0",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
-              Trace Sol
-            </button>
-            <button onClick={()=>{
-              const raw=localStorage.getItem('saved-scramble');
-              if(!raw){console.log('[diag-twist] no saved scramble');return;}
-              let savedCube; try{savedCube=JSON.parse(raw);}catch(e){console.log('[diag-twist] parse error',e);return;}
-              const facelets=cubeToKociemba(savedCube);
-              const kc=KociembaCube.fromString(facelets);
-              // Apply first 9 phase1 moves
-              const phase1Moves=["R","B2","U'","B2","L'","F","R","B'","R"];
-              console.log('[diag-twist] start co=',JSON.stringify(kc.co),'twist=',kc.twist());
-              for(const mv of phase1Moves){
-                kc.move(mv);
-                const coArr=kc.co.slice();
-                const tw=kc.twist();
-                const coAllZero=coArr.every(v=>v===0);
-                const twistImpliesCo=(() => { const t=new KociembaCube(); t.twist(tw); return t.co.slice(); })();
-                const consistent=twistImpliesCo.every((v,i)=>v===coArr[i]);
-                console.log(`[diag-twist] after ${mv.padEnd(3)}: co=${JSON.stringify(coArr)} twist=${tw} twist→co=${JSON.stringify(twistImpliesCo)} consistent=${consistent}${!consistent?' *** TWIST/CO MISMATCH ***':coAllZero?'':' (co non-zero, twist='+tw+')'}`);
-              }
-            }} style={{background:"#0d0d18",border:"1px solid #F57F17",borderRadius:6,padding:"6px 10px",color:"#F57F17",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
-              Diag Twist
-            </button>
-            <button onClick={()=>{
-              const facelets="FLBLUBRFLDLRFRRRUFDDBDFRFBBLRURDBUFLUFFLLBBDUDURUBDDUL";
-              console.log('[diag-fs] facelets=',facelets);
-              const kc=KociembaCube.fromString(facelets);
-              const coSum=kc.co.reduce((a,v)=>a+v,0);
-              console.log('[diag-fs] co=',JSON.stringify(kc.co),'sum=',coSum,'sum%3=',coSum%3,(coSum%3!==0?'*** INVALID — sum not 0 mod 3 ***':'✓ valid'));
-              console.log('[diag-fs] cp=',JSON.stringify(kc.cp));
-              // Per-corner detail: what did fromString see at each corner position?
-              const cFacelet=[[8,9,20],[6,18,38],[0,36,47],[2,45,11],[27,20,16],[26,44,24],[33,51,42],[35,17,53]]; // cornerFacelet decoded
-              const cornerNames=['URF','UFL','ULB','UBR','DFR','DLF','DBL','DRB'];
-              for(let i=0;i<=7;i++){
-                const stickers=[facelets[cFacelet[i][0]],facelets[cFacelet[i][1]],facelets[cFacelet[i][2]]];
-                let oriFound=-1;
-                for(let s=0;s<=2;s++) if(stickers[s]==='U'||stickers[s]==='D'){oriFound=s;break;}
-                console.log(`[diag-fs] corner pos ${i} (${cornerNames[i]}): stickers=${JSON.stringify(stickers)} U/D at slot=${oriFound} → co[${i}]=${kc.co[i]}${oriFound===-1?' *** NO U/D FOUND, ori=3, stored as 0 ***':''}`);
-              }
-            }} style={{background:"#0d0d18",border:"1px solid #00838F",borderRadius:6,padding:"6px 10px",color:"#00838F",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
-              Diag FromStr
-            </button>
-            <button onClick={()=>{
-              const moveLabels=['U','R','F','D','L','B'];
-              console.log('[audit-moves] Checking co arrays for Cube.moves[0..5]...');
-              let allOk=true;
-              for(let i=0;i<=5;i++){
-                const co=KociembaCube.moves[i].co;
-                const sum=co.reduce((a,v)=>a+v,0);
-                const mod=sum%3;
-                const ok=mod===0;
-                console.log(`[audit-moves] moves[${i}] (${moveLabels[i]}): co=${JSON.stringify(co)} sum=${sum} sum%3=${mod} ${ok?'✓':'✗ *** INVALID ***'}`);
-                if(!ok) allOk=false;
-              }
-              console.log(allOk?'[audit-moves] ✓ All 6 base moves have co sum divisible by 3':'[audit-moves] ✗ At least one base move has invalid co sum — this is the source of orientation corruption');
-            }} style={{background:"#0d0d18",border:"1px solid #558B2F",borderRadius:6,padding:"6px 10px",color:"#558B2F",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
-              Audit Moves
-            </button>
-            <button onClick={()=>{
-              const corners=[
-                {name:'URF', s:[['U',8],['R',0],['F',2]]},
-                {name:'UFL', s:[['U',6],['F',0],['L',2]]},
-                {name:'ULB', s:[['U',0],['L',0],['B',2]]},
-                {name:'UBR', s:[['U',2],['B',0],['R',2]]},
-                {name:'DFR', s:[['D',2],['F',8],['R',6]]},
-                {name:'DLF', s:[['D',0],['L',8],['F',6]]},
-                {name:'DBL', s:[['D',6],['B',8],['L',6]]},
-                {name:'DRB', s:[['D',8],['R',8],['B',6]]},
-              ];
-              console.log('[log-corners] Current cube corners:');
-              for(const {name,s} of corners){
-                const colors=s.map(([f,i])=>cube[f][i]);
-                const udCount=colors.filter(c=>c==='Y'||c==='W').length;
-                const label=`[${s.map(([f,i])=>`${f}[${i}]`).join(', ')}]`;
-                console.log(`[log-corners] ${name}: ${label} = [${colors.join(', ')}]${udCount!==1?' *** '+udCount+' Y/W stickers ***':''}`);
-              }
-            }} style={{background:"#0d0d18",border:"1px solid #AD1457",borderRadius:6,padding:"6px 10px",color:"#AD1457",fontFamily:"'Courier New',monospace",fontSize:10,cursor:"pointer"}}>
-              Log Corners
-            </button>
           </div>
         </div>
       )}
@@ -696,7 +406,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
       {phase==="solving" && (
         <div style={{textAlign:"center",padding:"80px 0"}}>
           <div style={{width:60,height:60,margin:"0 auto 20px",borderRadius:"50%",border:"3px solid #1a1a2e",borderTop:"3px solid #FFD600",borderRight:"3px solid #E65100",animation:"spin .8s linear infinite"}}/>
-          <div style={{fontSize:10,letterSpacing:6,color:"#444",animation:"pulse 1.4s ease infinite"}}>{solveMode==="optimal"?"RUNNING KOCIEMBA...":"CALCULATING SOLUTION..."}</div>
+          <div style={{fontSize:10,letterSpacing:6,color:"#444",animation:"pulse 1.4s ease infinite"}}>SOLVING...</div>
         </div>
       )}
 
@@ -749,7 +459,7 @@ If already solved: {"totalMoves":0,"steps":[{"n":1,"stage":"Solved!","move":"","
               <button key={label} onClick={fn} disabled={dis} style={{background:"transparent",border:"1px solid #1a1a2e",borderRadius:6,padding:"11px 18px",cursor:dis?"default":"pointer",color:dis?"#2a2a2a":"#888",fontFamily:"'Courier New',monospace",fontSize:"0.8rem",letterSpacing:2}}>{label}</button>
             ))}
             <button
-              onClick={()=>{if(!playing){console.log("PLAY clicked, step="+step);setPlayingSync(true);goStep(step+1);}else{setPlayingSync(false);}}}
+              onClick={()=>{if(!playing){setPlayingSync(true);goStep(step+1);}else{setPlayingSync(false);}}}
               disabled={step===total}
               style={{background:playing?"#1a1a2e":"linear-gradient(135deg,#E65100,#FFD600)",border:"none",borderRadius:6,padding:"11px 22px",cursor:step===total?"default":"pointer",color:playing?"#FFD600":step===total?"#333":"#000",fontFamily:"'Courier New',monospace",fontWeight:900,fontSize:"1rem",letterSpacing:2}}
             >{playing?"⏸":"▶"}</button>

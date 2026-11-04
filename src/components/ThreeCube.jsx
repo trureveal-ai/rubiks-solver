@@ -197,8 +197,6 @@ function CubeScene({ stickerMap, animating, onDone, duration }) {
 }
 
 // ── Public component ─────────────────────────────────────────────────────────
-const TEST_MOVES = ["U", "R", "F", "D", "L", "B"];
-
 export default function ThreeCube({ cube, width = 340, height = 340, animTrigger, onAnimationDone, animDuration = 0.4 }) {
   const stickerMap = useMemo(() => buildStickerMap(cube), [cube]);
   const [animating, setAnimating] = useState(null);
@@ -240,29 +238,6 @@ export default function ThreeCube({ cube, width = 340, height = 340, animTrigger
           />
         </Canvas>
       </WebGLErrorBoundary>
-
-      {/* Test buttons — one per face */}
-      <div style={{ display: "flex", gap: 4, justifyContent: "center", marginTop: 8 }}>
-        {TEST_MOVES.map(move => (
-          <button
-            key={move}
-            disabled={!!animating}
-            onClick={() => setAnimating(MOVE_ANIM[move])}
-            style={{
-              padding: "4px 10px",
-              background: "#1a1a2e",
-              border: "1px solid #FFD60044",
-              borderRadius: 5,
-              color: animating ? "#333" : "#FFD600",
-              fontFamily: "'Courier New',monospace",
-              fontSize: 11,
-              cursor: animating ? "default" : "pointer",
-            }}
-          >
-            {move}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
