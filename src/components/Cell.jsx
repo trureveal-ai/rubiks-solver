@@ -20,7 +20,7 @@ export default function Cell({color, size=36, onClick, onCycle, onHover, paintin
       onMouseLeave={() => setHover(false)}
       onTouchStart={handleTouch}
       style={{
-        width: size, height: size,
+        width: size, height: size, maxWidth: "100%", aspectRatio: "1",
         background: C[color] || "#1a1a1a",
         borderRadius: 5,
         border: "2.5px solid rgba(0,0,0,0.5)",

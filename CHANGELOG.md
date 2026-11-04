@@ -7,6 +7,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.5.0] — 2026-11-04
+
+### Added
+- **PWA support** — web app manifest (`manifest.json`) with icons enables "Add to Home Screen" on iPhone and Android; app launches in standalone mode with custom splash
+- **App icon** — custom Rubiksology icon (isometric cube with brand colors) at 180px (apple-touch-icon), 192px and 512px sizes
+- **iOS meta tags** — `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style` (black-translucent), and `apple-mobile-web-app-title` for native-feel home screen experience
+
+### Fixed
+- **Cross layout overflow on mobile** — four side-by-side faces (Left, Front, Right, Back) no longer overflow the viewport on narrow phones; face cells now use responsive `1fr` grid columns with fluid gaps and `aspect-ratio: 1` sizing
+- **Color palette dot scaling** — reduced selected-color scale from 1.3× to 1.15× and dot max-size from `8vw` to `7vw` to prevent overflow on small screens
+
+---
+
 ## [1.4.0] — 2026-11-04
 
 ### Added
@@ -135,7 +148,8 @@ Initial release of Rubiksology.
 
 ---
 
-[1.4.0]: https://github.com/trureveal-ai/rubiks-solver/compare/v1.3.0...HEAD
+[1.5.0]: https://github.com/trureveal-ai/rubiks-solver/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/trureveal-ai/rubiks-solver/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/trureveal-ai/rubiks-solver/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/trureveal-ai/rubiks-solver/compare/306ce99...v1.2.0
 [1.1.0]: https://github.com/trureveal-ai/rubiks-solver/compare/a0c26bb...306ce99

@@ -313,8 +313,8 @@ export default function App() {
 
               {!cs.cycleMode ? (
                 <div style={{marginBottom:14}}>
-                  <div style={{display:"flex",gap:"clamp(6px, 2vw, 10px)",justifyContent:"center",background:"#0d0d18",padding:"8px 16px",borderRadius:40,border:"1px solid #1a1a2e"}}>
-                    {PAL.map(col=><div key={col} onClick={()=>cs.setSelColor(col)} title={NAMES[col]} style={{width:"clamp(28px, 8vw, 38px)",height:"clamp(28px, 8vw, 38px)",borderRadius:"50%",background:C[col],cursor:"pointer",border:cs.selColor===col?"3px solid #fff":"3px solid transparent",transform:cs.selColor===col?"scale(1.3)":"scale(1)",boxShadow:cs.selColor===col?`0 0 16px ${C[col]}cc`:"none",transition:"all .15s",WebkitTapHighlightColor:"transparent"}}/>)}
+                  <div style={{display:"flex",gap:"clamp(6px, 2vw, 10px)",justifyContent:"center",background:"#0d0d18",padding:"10px 16px",borderRadius:40,border:"1px solid #1a1a2e"}}>
+                    {PAL.map(col=><div key={col} onClick={()=>cs.setSelColor(col)} title={NAMES[col]} style={{width:"clamp(28px, 7vw, 38px)",height:"clamp(28px, 7vw, 38px)",borderRadius:"50%",background:C[col],cursor:"pointer",border:cs.selColor===col?"3px solid #fff":"3px solid transparent",transform:cs.selColor===col?"scale(1.15)":"scale(1)",boxShadow:cs.selColor===col?`0 0 12px ${C[col]}cc`:"none",transition:"all .15s",WebkitTapHighlightColor:"transparent"}}/>)}
                   </div>
                   <div style={{textAlign:"center",fontSize:9,color:C[cs.selColor],letterSpacing:3,marginTop:6,fontWeight:900}}>PAINTING: {NAMES[cs.selColor].toUpperCase()}</div>
                 </div>
@@ -323,7 +323,7 @@ export default function App() {
               )}
 
               {cs.flatLayout==="cross" && (
-                <div onMouseDown={()=>cs.setPainting(true)} style={{display:"grid",gridTemplateColumns:"repeat(4,auto)",gridTemplateRows:"repeat(3,auto)",gridTemplateAreas:`". U . ." "L F R B" ". D . ."`,gap:"clamp(3px, 1vw, 6px)",justifyContent:"center"}}>
+                <div onMouseDown={()=>cs.setPainting(true)} style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gridTemplateRows:"repeat(3,auto)",gridTemplateAreas:`". U . ." "L F R B" ". D . ."`,gap:"clamp(2px, 0.8vw, 6px)",justifyContent:"center",width:"100%",maxWidth:530,margin:"0 auto",overflow:"hidden"}}>
                   {["U","L","F","R","B","D"].map(fk=><div key={fk} style={{gridArea:fk}}><FlatFace faceKey={fk} stickers={cs.cube[fk]} onPaint={cs.paint} onCycle={cs.cycleSticker} painting={cs.painting} cycleMode={cs.cycleMode} /></div>)}
                 </div>
               )}
