@@ -19,6 +19,15 @@ class ErrorBoundary extends Component {
   }
 }
 
+// Dismiss splash screen once React renders
+const splash = document.getElementById('splash');
+if (splash) {
+  requestAnimationFrame(() => {
+    splash.classList.add('fade');
+    setTimeout(() => splash.remove(), 500);
+  });
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
@@ -26,3 +35,10 @@ createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </StrictMode>,
 )
+
+// Register service worker for offline support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/rubiks-solver/sw.js').catch(() => {});
+  });
+}

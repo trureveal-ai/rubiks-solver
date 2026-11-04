@@ -7,6 +7,20 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.6.0] — 2026-11-04
+
+### Added
+- **Service worker** — app now works fully offline after first visit; assets cached with cache-first strategy, navigation uses network-first with cache fallback
+- **Favicon** — multi-format favicon support: `.ico` (32×16), `.svg` (scalable), displayed in browser tabs and bookmarks
+- **Open Graph & Twitter Card meta tags** — rich link previews when sharing on social media, iMessage, Slack, etc. with custom 1200×630 OG image
+- **Loading splash screen** — branded splash with animated spinner replaces blank screen while app JS loads; smoothly fades out once React mounts
+
+### Changed
+- Page title updated to "Rubiksology — AI-Powered Rubik's Cube Solver" for better SEO
+- Meta description expanded with feature highlights
+
+---
+
 ## [1.5.0] — 2026-11-04
 
 ### Added
@@ -148,7 +162,8 @@ Initial release of Rubiksology.
 
 ---
 
-[1.5.0]: https://github.com/trureveal-ai/rubiks-solver/compare/v1.4.0...HEAD
+[1.6.0]: https://github.com/trureveal-ai/rubiks-solver/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/trureveal-ai/rubiks-solver/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/trureveal-ai/rubiks-solver/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/trureveal-ai/rubiks-solver/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/trureveal-ai/rubiks-solver/compare/306ce99...v1.2.0
