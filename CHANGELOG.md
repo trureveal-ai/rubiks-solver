@@ -7,6 +7,26 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.4.0] — 2026-11-04
+
+### Added
+- **Camera angle presets** — 6 preset views (Default, Front, Top, Right, Back, Isometric) with smooth animated transitions between angles in the solution 3D view
+- **Undo/redo keyboard shortcuts** — `Ctrl+Z` steps backward, `Ctrl+Shift+Z` steps forward during solution playback
+- **Solution analysis panel** — shows orientations searched, solution efficiency rating (Excellent/Very Good/Good/Fair), and comparison to God's Number (20 moves)
+- **High-contrast mode** — toggle button in header switches to pure black background with white text and enhanced borders for accessibility
+- **Skip-to-content link** — hidden skip link appears on Tab focus for keyboard navigation
+- **Screen reader support** — `aria-live` region announces current step and state changes; `aria-label` on all interactive controls; `role="application"` and `role="toolbar"` semantic regions
+- **Focus indicators** — `focus-visible` outlines on all buttons and inputs for keyboard users
+
+### Changed
+- Header uses semantic `<header>` and `<h1>` elements
+- Navigation bar uses `<nav>` element with `aria-label`
+- Progress dots have `role="progressbar"` with `aria-valuenow`/`aria-valuemax`
+- Keyboard hint updated to show undo shortcut
+- Camera preset toolbar shown below 3D cube in solution view
+
+---
+
 ## [1.3.0] — 2026-11-04
 
 ### Added
@@ -115,7 +135,8 @@ Initial release of Rubiksology.
 
 ---
 
-[1.3.0]: https://github.com/trureveal-ai/rubiks-solver/compare/v1.2.0...HEAD
+[1.4.0]: https://github.com/trureveal-ai/rubiks-solver/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/trureveal-ai/rubiks-solver/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/trureveal-ai/rubiks-solver/compare/306ce99...v1.2.0
 [1.1.0]: https://github.com/trureveal-ai/rubiks-solver/compare/a0c26bb...306ce99
 [1.0.0]: https://github.com/trureveal-ai/rubiks-solver/commit/a0c26bb

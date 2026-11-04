@@ -4,7 +4,7 @@ import {
 } from "./engine/cube.js";
 import Cell from "./components/Cell.jsx";
 import FlatFace from "./components/FlatFace.jsx";
-import ThreeCube from "./components/ThreeCube.jsx";
+import ThreeCube, { CAMERA_PRESETS } from "./components/ThreeCube.jsx";
 import MoveBadge from "./components/MoveBadge.jsx";
 import ScrambleBanner from "./components/ScrambleBanner.jsx";
 
@@ -76,6 +76,8 @@ export default function App() {
   const [startCube, setStartCube] = useState(null);
   const [toast, setToast] = useState({ message: "", visible: false });
   const toastTimer = useRef(null);
+  const [cameraPreset, setCameraPreset] = useState("default");
+  const [highContrast, setHighContrast] = useState(false);
 
   const anim = useAnimation({ solution, startCube, cube: cs.cube });
 
@@ -93,6 +95,24 @@ export default function App() {
       if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
 
       const total = solution.steps.length;
+      // Undo/redo: Ctrl+Z / Ctrl+Shift+Z
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        if (anim.step > 0 && anim.pendingStep === null) {
+          anim.setPlayingSync(false);
+          anim.goStep(anim.step - 1);
+        }
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'Z' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        if (anim.step < total && anim.pendingStep === null) {
+          anim.setPlayingSync(false);
+          anim.goStep(anim.step + 1);
+        }
+        return;
+      }
+
       switch (e.key) {
         case "ArrowRight":
           e.preventDefault();
@@ -215,13 +235,14 @@ export default function App() {
   };
 
   return (
-    <div style={{
-      minHeight:"100vh", background:"#07070f",
-      backgroundImage:"radial-gradient(ellipse 80% 50% at 50% -10%, #0f0f2a, transparent)",
+    <div role="application" aria-label="Rubiksology Rubik's Cube Solver" style={{
+      minHeight:"100vh", background: highContrast ? "#000" : "#07070f",
+      backgroundImage: highContrast ? "none" : "radial-gradient(ellipse 80% 50% at 50% -10%, #0f0f2a, transparent)",
       color:"#fff", fontFamily:"'Courier New',monospace",
       display:"flex", flexDirection:"column", alignItems:"center",
       padding:"28px 16px 80px", userSelect:"none",
     }}>
+      <a href="#main-content" style={{position:"absolute",top:"-40px",left:0,background:"#FFD600",color:"#000",padding:"8px 16px",zIndex:9999,fontSize:12,transition:"top .2s"}} onFocus={e=>{e.target.style.top="0"}} onBlur={e=>{e.target.style.top="-40px"}}>Skip to content</a>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
@@ -233,17 +254,27 @@ export default function App() {
         input:focus{border-color:#FFD600;}
         button:hover:not(:disabled){filter:brightness(1.15);}
         button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+        button:focus-visible,input:focus-visible{outline:2px solid #FFD600;outline-offset:2px;}
+        ${highContrast ? `
+          .hc-border{border-color:#fff !important;}
+          .hc-text{color:#fff !important;}
+        ` : ""}
       `}</style>
 
       {/* Header */}
-      <div style={{textAlign:"center",marginBottom:22}}>
+      <header style={{textAlign:"center",marginBottom:22}} id="main-content">
         <div style={{fontSize:9,letterSpacing:8,color:"#333",marginBottom:5}}>◈ KOCIEMBA · AI-POWERED ◈</div>
-        <div style={{
-          fontSize:"clamp(1.6rem, 7vw, 2.4rem)", fontWeight:900, letterSpacing:"-1px", lineHeight:1,
-          background:"linear-gradient(100deg,#E65100 0%,#FFD600 30%,#2E7D32 60%,#1565C0 100%)",
-          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-        }}>RUBIKSOLOGY</div>
-      </div>
+        <h1 style={{
+          fontSize:"clamp(1.6rem, 7vw, 2.4rem)", fontWeight:900, letterSpacing:"-1px", lineHeight:1, margin:0,
+          background: highContrast ? "none" : "linear-gradient(100deg,#E65100 0%,#FFD600 30%,#2E7D32 60%,#1565C0 100%)",
+          WebkitBackgroundClip: highContrast ? "unset" : "text",
+          WebkitTextFillColor: highContrast ? "#fff" : "transparent",
+        }}>RUBIKSOLOGY</h1>
+        <button onClick={()=>setHighContrast(h=>!h)} aria-label={highContrast?"Disable high contrast mode":"Enable high contrast mode"} style={{
+          marginTop:8, padding:"3px 10px", border:`1px solid ${highContrast?"#fff":"#1a1a2e"}`, borderRadius:4, background:"transparent",
+          color:highContrast?"#fff":"#333", fontFamily:"'Courier New',monospace", fontSize:7, letterSpacing:2, cursor:"pointer",
+        }}>{highContrast ? "◉ HIGH CONTRAST ON" : "◎ HIGH CONTRAST"}</button>
+      </header>
 
       {/* ══════════════ INPUT ══════════════ */}
       {anim.phase==="input" && (
@@ -401,10 +432,23 @@ export default function App() {
               {anim.highlightFace&&<span style={{color:FACE_COLOR[anim.highlightFace]||"#FFD600",marginLeft:8}}>[ {FLABEL[anim.highlightFace]} FACE ]</span>}
             </div>
             <div style={{width:"100%",maxWidth:320,aspectRatio:"1"}}>
-              {hasWebGL ? <ThreeCube cube={anim.displayCube} width="100%" height="100%" animTrigger={anim.animTrigger} onAnimationDone={anim.handleAnimDone} animDuration={anim.SPEEDS[anim.playSpeed].anim}/> : <NoWebGL width="100%" height="100%"/>}
+              {hasWebGL ? <ThreeCube cube={anim.displayCube} width="100%" height="100%" animTrigger={anim.animTrigger} onAnimationDone={anim.handleAnimDone} animDuration={anim.SPEEDS[anim.playSpeed].anim} cameraPreset={cameraPreset}/> : <NoWebGL width="100%" height="100%"/>}
             </div>
-            <div style={{display:"flex",gap:4,marginTop:12,flexWrap:"wrap",justifyContent:"center",maxWidth:400}}>
-              {solution.steps.map((_,i)=><div key={i} onClick={()=>anim.goStep(i+1)} style={{height:5,width:i===anim.step-1?18:5,borderRadius:3,cursor:"pointer",background:i<anim.step?"#E65100":i===anim.step?"#FFD600":"#1a1a2e",transition:"all .2s",WebkitTapHighlightColor:"transparent"}}/>)}
+
+            {/* Camera presets */}
+            <div style={{display:"flex",gap:4,marginTop:12,alignItems:"center",flexWrap:"wrap",justifyContent:"center"}} role="toolbar" aria-label="Camera angle presets">
+              <span style={{fontSize:7,color:"#333",letterSpacing:2,marginRight:4}}>VIEW</span>
+              {Object.entries(CAMERA_PRESETS).map(([key,{label,name}])=>(
+                <button key={key} onClick={()=>setCameraPreset(key)} aria-label={`${name} camera view`} title={name} style={{
+                  width:28, height:24, border:`1px solid ${cameraPreset===key?"#FFD600":"#1a1a2e"}`, borderRadius:4,
+                  background:cameraPreset===key?"#FFD60018":"transparent", color:cameraPreset===key?"#FFD600":"#444",
+                  fontFamily:"'Courier New',monospace", fontSize:9, cursor:"pointer", fontWeight:cameraPreset===key?900:400,
+                }}>{label}</button>
+              ))}
+            </div>
+
+            <div style={{display:"flex",gap:4,marginTop:8,flexWrap:"wrap",justifyContent:"center",maxWidth:400}} role="progressbar" aria-valuenow={anim.step} aria-valuemin={0} aria-valuemax={total} aria-label={`Solution progress: step ${anim.step} of ${total}`}>
+              {solution.steps.map((_,i)=><div key={i} onClick={()=>anim.goStep(i+1)} aria-hidden="true" style={{height:5,width:i===anim.step-1?18:5,borderRadius:3,cursor:"pointer",background:i<anim.step?"#E65100":i===anim.step?"#FFD600":"#1a1a2e",transition:"all .2s",WebkitTapHighlightColor:"transparent"}}/>)}
             </div>
           </div>
 
@@ -436,6 +480,33 @@ export default function App() {
             </div>
           </div>
 
+          {/* Solution comparison / efficiency */}
+          {solution.stats && (
+            <div style={{background:"#0d0d18",border:"1px solid #1a1a2e",borderRadius:12,padding:"12px 16px",marginBottom:14}} role="region" aria-label="Solution analysis">
+              <div style={{fontSize:7,color:"#555",letterSpacing:3,marginBottom:10}}>◈ SOLUTION ANALYSIS</div>
+              <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                <div style={{flex:1,minWidth:100}}>
+                  <div style={{fontSize:7,color:"#555",letterSpacing:2}}>ORIENTATIONS</div>
+                  <div style={{fontSize:"0.9rem",fontWeight:700,color:"#FFD600"}}>{solution.stats.orientationsSearched} / 24</div>
+                </div>
+                <div style={{flex:1,minWidth:100}}>
+                  <div style={{fontSize:7,color:"#555",letterSpacing:2}}>EFFICIENCY</div>
+                  <div style={{fontSize:"0.9rem",fontWeight:700,color:solution.totalMoves<=18?"#2E7D32":solution.totalMoves<=22?"#FFD600":"#E65100"}}>
+                    {solution.totalMoves<=14?"EXCELLENT":solution.totalMoves<=18?"VERY GOOD":solution.totalMoves<=22?"GOOD":"FAIR"}
+                  </div>
+                </div>
+                <div style={{flex:1,minWidth:100}}>
+                  <div style={{fontSize:7,color:"#555",letterSpacing:2}}>MOVES / GOD</div>
+                  <div style={{fontSize:"0.9rem",fontWeight:700,color:"#888"}}>{solution.totalMoves} / 20</div>
+                </div>
+              </div>
+              <div style={{fontSize:7,color:"#2a2a2a",letterSpacing:1,marginTop:8,lineHeight:1.6}}>
+                God's number for a 3×3 is 20 — any cube can be solved in ≤20 moves.
+                {solution.totalMoves<=20?" This solution is optimal-range.":" Multi-orientation search found the shortest among 24 rotations."}
+              </div>
+            </div>
+          )}
+
           {/* Step card */}
           <div key={anim.animIdx} style={{background:"#0d0d18",border:"1px solid #1a1a2e",borderRadius:14,padding:"20px 16px",marginBottom:16,animation:"up .35s ease"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:8}}>
@@ -453,17 +524,18 @@ export default function App() {
           </div>
 
           {/* Nav */}
-          <div style={{display:"flex",gap:"clamp(4px,1.5vw,8px)",justifyContent:"center",marginBottom:8,flexWrap:"wrap",alignItems:"center"}}>
-            <button onClick={()=>anim.goStep(0)} disabled={anim.step===0||anim.pendingStep!==null} style={{background:"transparent",border:"1px solid #1a1a2e",borderRadius:6,padding:"11px 14px",cursor:anim.step===0||anim.pendingStep!==null?"default":"pointer",color:anim.step===0||anim.pendingStep!==null?"#2a2a2a":"#888",fontFamily:"'Courier New',monospace",fontSize:"0.8rem",letterSpacing:2}}>⏮</button>
-            <button onClick={()=>{anim.setPlayingSync(false);anim.goStep(Math.max(0,anim.step-1));}} disabled={anim.step===0||anim.pendingStep!==null} style={{background:"transparent",border:"1px solid #1a1a2e",borderRadius:6,padding:"11px 14px",cursor:anim.step===0||anim.pendingStep!==null?"default":"pointer",color:anim.step===0||anim.pendingStep!==null?"#2a2a2a":"#888",fontFamily:"'Courier New',monospace",fontSize:"0.8rem",letterSpacing:2}}>←</button>
+          <nav aria-label="Solution playback controls" style={{display:"flex",gap:"clamp(4px,1.5vw,8px)",justifyContent:"center",marginBottom:8,flexWrap:"wrap",alignItems:"center"}}>
+            <button aria-label="Go to start" onClick={()=>anim.goStep(0)} disabled={anim.step===0||anim.pendingStep!==null} style={{background:"transparent",border:"1px solid #1a1a2e",borderRadius:6,padding:"11px 14px",cursor:anim.step===0||anim.pendingStep!==null?"default":"pointer",color:anim.step===0||anim.pendingStep!==null?"#2a2a2a":"#888",fontFamily:"'Courier New',monospace",fontSize:"0.8rem",letterSpacing:2}}>⏮</button>
+            <button aria-label="Previous step (undo)" onClick={()=>{anim.setPlayingSync(false);anim.goStep(Math.max(0,anim.step-1));}} disabled={anim.step===0||anim.pendingStep!==null} style={{background:"transparent",border:"1px solid #1a1a2e",borderRadius:6,padding:"11px 14px",cursor:anim.step===0||anim.pendingStep!==null?"default":"pointer",color:anim.step===0||anim.pendingStep!==null?"#2a2a2a":"#888",fontFamily:"'Courier New',monospace",fontSize:"0.8rem",letterSpacing:2}}>←</button>
             <button
+              aria-label={anim.playing?"Pause playback":"Play solution"}
               onClick={()=>{if(!anim.playing){anim.setPlayingSync(true);anim.goStep(anim.step+1);}else{anim.setPlayingSync(false);}}}
               disabled={anim.step===total}
               style={{background:anim.playing?"#1a1a2e":"linear-gradient(135deg,#E65100,#FFD600)",border:"none",borderRadius:6,padding:"11px 22px",cursor:anim.step===total?"default":"pointer",color:anim.playing?"#FFD600":anim.step===total?"#333":"#000",fontFamily:"'Courier New',monospace",fontWeight:900,fontSize:"1rem",letterSpacing:2}}
             >{anim.playing?"⏸":"▶"}</button>
-            <button onClick={()=>{anim.setPlayingSync(false);anim.goStep(Math.min(total,anim.step+1));}} disabled={anim.step===total||anim.pendingStep!==null} style={{background:anim.step<total&&anim.pendingStep===null?"linear-gradient(135deg,#E65100,#FFD600)":"transparent",border:anim.step<total&&anim.pendingStep===null?"none":"1px solid #1a1a2e",borderRadius:6,padding:"11px 14px",cursor:anim.step===total||anim.pendingStep!==null?"default":"pointer",color:anim.step<total&&anim.pendingStep===null?"#000":anim.step===total||anim.pendingStep!==null?"#2a2a2a":"#888",fontFamily:"'Courier New',monospace",fontWeight:900,fontSize:"0.8rem",letterSpacing:2}}>→</button>
-            <button onClick={()=>{anim.setPlayingSync(false);anim.goStep(total);}} disabled={anim.step===total||anim.pendingStep!==null} style={{background:"transparent",border:"1px solid #1a1a2e",borderRadius:6,padding:"11px 14px",cursor:anim.step===total||anim.pendingStep!==null?"default":"pointer",color:anim.step===total||anim.pendingStep!==null?"#2a2a2a":"#888",fontFamily:"'Courier New',monospace",fontSize:"0.8rem",letterSpacing:2}}>⏭</button>
-          </div>
+            <button aria-label="Next step (redo)" onClick={()=>{anim.setPlayingSync(false);anim.goStep(Math.min(total,anim.step+1));}} disabled={anim.step===total||anim.pendingStep!==null} style={{background:anim.step<total&&anim.pendingStep===null?"linear-gradient(135deg,#E65100,#FFD600)":"transparent",border:anim.step<total&&anim.pendingStep===null?"none":"1px solid #1a1a2e",borderRadius:6,padding:"11px 14px",cursor:anim.step===total||anim.pendingStep!==null?"default":"pointer",color:anim.step<total&&anim.pendingStep===null?"#000":anim.step===total||anim.pendingStep!==null?"#2a2a2a":"#888",fontFamily:"'Courier New',monospace",fontWeight:900,fontSize:"0.8rem",letterSpacing:2}}>→</button>
+            <button aria-label="Go to end" onClick={()=>{anim.setPlayingSync(false);anim.goStep(total);}} disabled={anim.step===total||anim.pendingStep!==null} style={{background:"transparent",border:"1px solid #1a1a2e",borderRadius:6,padding:"11px 14px",cursor:anim.step===total||anim.pendingStep!==null?"default":"pointer",color:anim.step===total||anim.pendingStep!==null?"#2a2a2a":"#888",fontFamily:"'Courier New',monospace",fontSize:"0.8rem",letterSpacing:2}}>⏭</button>
+          </nav>
 
           {/* Speed + keyboard hint */}
           <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:20,alignItems:"center",flexWrap:"wrap"}}>
@@ -472,7 +544,7 @@ export default function App() {
                 <button key={key} onClick={()=>anim.setPlaySpeed(key)} style={{padding:"7px 9px",border:`1px solid ${anim.playSpeed===key?"#FFD600":"#1a1a2e"}`,borderRadius:5,cursor:"pointer",fontFamily:"'Courier New',monospace",fontSize:9,letterSpacing:1,background:anim.playSpeed===key?"#FFD60018":"transparent",color:anim.playSpeed===key?"#FFD600":"#444"}}>{label}</button>
               ))}
             </div>
-            <div style={{fontSize:7,color:"#2a2a2a",letterSpacing:1}}>← → STEP · SPACE PLAY · HOME END</div>
+            <div style={{fontSize:7,color:"#2a2a2a",letterSpacing:1}}>← → STEP · SPACE PLAY · HOME END · ⌘Z UNDO</div>
           </div>
 
           {/* All moves */}
@@ -492,6 +564,12 @@ export default function App() {
           <button onClick={reset} style={{width:"100%",background:"transparent",border:"1px solid #1a1a2e",borderRadius:8,padding:11,color:"#444",fontFamily:"'Courier New',monospace",fontSize:9,letterSpacing:3,cursor:"pointer"}}>◂ START OVER</button>
         </div>
       )}
+
+      {/* Screen reader live region */}
+      <div aria-live="polite" aria-atomic="true" style={{position:"absolute",width:1,height:1,overflow:"hidden",clip:"rect(0,0,0,0)"}}>
+        {anim.phase==="solution" && solution && cur && `Step ${anim.step} of ${total}: ${cur.move || "Start"} — ${cur.explain}`}
+        {anim.phase==="solving" && "Solving cube, please wait."}
+      </div>
 
       {/* Version */}
       <div style={{marginTop:40,fontSize:7,color:"#1a1a2e",letterSpacing:3,textAlign:"center"}}>

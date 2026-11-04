@@ -1,6 +1,7 @@
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { useMemo, useState, useRef, useEffect, Component } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback, useImperativeHandle, forwardRef, Component } from "react";
+import * as THREE from "three";
 import { C } from "../engine/cube.js";
 
 // ── WebGL error boundary ────────────────────────────────────────────────────
@@ -144,8 +145,45 @@ for (let x = -1; x <= 1; x++)
       if (x !== 0 || y !== 0 || z !== 0)
         POSITIONS.push([x, y, z]);
 
+// ── Camera presets ──────────────────────────────────────────────────────────
+export const CAMERA_PRESETS = {
+  default:    { pos: [3.5, 2.8, 6.5],  label: "⬡",  name: "Default" },
+  front:      { pos: [0, 0, 8],        label: "F",   name: "Front" },
+  top:        { pos: [0, 8, 0.01],     label: "T",   name: "Top" },
+  right:      { pos: [8, 0, 0],        label: "R",   name: "Right" },
+  back:       { pos: [0, 0, -8],       label: "B",   name: "Back" },
+  isometric:  { pos: [5, 5, 5],        label: "◇",  name: "Isometric" },
+};
+
+// ── Smooth camera controller ────────────────────────────────────────────────
+function CameraController({ targetPos, controlsRef }) {
+  const { camera } = useThree();
+  const animRef = useRef(null);
+
+  useEffect(() => {
+    if (!targetPos) return;
+    const start = camera.position.clone();
+    const end = new THREE.Vector3(...targetPos);
+    if (start.distanceTo(end) < 0.01) return;
+    animRef.current = { start, end, t: 0 };
+  }, [targetPos]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useFrame((_, delta) => {
+    if (!animRef.current) return;
+    animRef.current.t = Math.min(animRef.current.t + delta * 3, 1);
+    const eased = 1 - Math.pow(1 - animRef.current.t, 3);
+    camera.position.lerpVectors(animRef.current.start, animRef.current.end, eased);
+    camera.lookAt(0, 0, 0);
+    controlsRef.current?.update();
+    if (animRef.current.t >= 1) animRef.current = null;
+  });
+
+  return null;
+}
+
 // ── CubeScene (must live inside <Canvas> to use useFrame) ───────────────────
-function CubeScene({ stickerMap, animating, onDone, duration }) {
+function CubeScene({ stickerMap, animating, onDone, duration, cameraTarget }) {
+  const controlsRef = useRef();
   const layerGroupRef = useRef();
   const elapsedRef    = useRef(0);
 
@@ -187,7 +225,9 @@ function CubeScene({ stickerMap, animating, onDone, duration }) {
         ))}
       </group>
 
+      <CameraController targetPos={cameraTarget} controlsRef={controlsRef} />
       <OrbitControls
+        ref={controlsRef}
         enabled={!animating}
         enablePan={false}
         enableZoom={false}
@@ -198,9 +238,10 @@ function CubeScene({ stickerMap, animating, onDone, duration }) {
 }
 
 // ── Public component ─────────────────────────────────────────────────────────
-export default function ThreeCube({ cube, width = 340, height = 340, animTrigger, onAnimationDone, animDuration = 0.4 }) {
+export default function ThreeCube({ cube, width = 340, height = 340, animTrigger, onAnimationDone, animDuration = 0.4, cameraPreset = "default" }) {
   const stickerMap = useMemo(() => buildStickerMap(cube), [cube]);
   const [animating, setAnimating] = useState(null);
+  const cameraTarget = useMemo(() => CAMERA_PRESETS[cameraPreset]?.pos || CAMERA_PRESETS.default.pos, [cameraPreset]);
 
   // External trigger: parent sets animTrigger={move, key} to kick off an animation.
   // key must change each call (even for repeated moves) so the effect fires.
@@ -236,6 +277,7 @@ export default function ThreeCube({ cube, width = 340, height = 340, animTrigger
             animating={animating}
             onDone={handleDone}
             duration={animDuration}
+            cameraTarget={cameraTarget}
           />
         </Canvas>
       </WebGLErrorBoundary>
