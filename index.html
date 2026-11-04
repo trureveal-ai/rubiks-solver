@@ -3,9 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Rubiksology</title>
-    <meta name="description" content="AI-powered Rubik's Cube solver using the Kociemba two-phase algorithm" />
+    <title>Rubiksology — AI-Powered Rubik's Cube Solver</title>
+    <meta name="description" content="Solve any Rubik's Cube with the Kociemba two-phase algorithm. 3D animated step-by-step solutions with multi-orientation search across 24 rotations." />
     <meta name="theme-color" content="#07070f" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="/rubiks-solver/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/rubiks-solver/favicon.svg" type="image/svg+xml" />
 
     <!-- PWA manifest -->
     <link rel="manifest" href="/rubiks-solver/manifest.json" />
@@ -15,9 +19,90 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Rubiksology" />
     <link rel="apple-touch-icon" href="/rubiks-solver/apple-touch-icon.png" />
-    <script type="module" crossorigin src="/rubiks-solver/assets/index-DuhlQXj-.js"></script>
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Rubiksology — AI-Powered Rubik's Cube Solver" />
+    <meta property="og:description" content="Solve any Rubik's Cube with the Kociemba two-phase algorithm. 3D animated step-by-step solutions." />
+    <meta property="og:image" content="https://trureveal-ai.github.io/rubiks-solver/og-image.png" />
+    <meta property="og:url" content="https://trureveal-ai.github.io/rubiks-solver/" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Rubiksology — AI-Powered Rubik's Cube Solver" />
+    <meta name="twitter:description" content="Solve any Rubik's Cube with the Kociemba two-phase algorithm. 3D animated step-by-step solutions." />
+    <meta name="twitter:image" content="https://trureveal-ai.github.io/rubiks-solver/og-image.png" />
+
+    <!-- Splash screen styles (removed once React mounts) -->
+    <style>
+      body { margin: 0; background: #07070f; }
+      #splash {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: #07070f;
+        transition: opacity .4s ease;
+      }
+      #splash.fade { opacity: 0; pointer-events: none; }
+      #splash svg { width: 80px; height: 80px; margin-bottom: 24px; }
+      #splash .title {
+        font-family: 'Courier New', monospace; font-weight: 900;
+        font-size: 1.6rem; letter-spacing: -1px; color: #FFD600;
+      }
+      #splash .sub {
+        font-family: 'Courier New', monospace;
+        font-size: 9px; letter-spacing: 6px; color: #333; margin-top: 8px;
+      }
+      #splash .loader {
+        width: 40px; height: 40px; margin-top: 32px;
+        border-radius: 50%;
+        border: 3px solid #1a1a2e;
+        border-top-color: #FFD600; border-right-color: #E65100;
+        animation: sp .8s linear infinite;
+      }
+      @keyframes sp { to { transform: rotate(360deg); } }
+    </style>
+    <script type="module" crossorigin src="/rubiks-solver/assets/index-BLbwcdV_.js"></script>
   </head>
   <body>
+    <!-- Splash screen shown while JS loads -->
+    <div id="splash">
+      <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <rect width="64" height="64" rx="14" fill="#07070f"/>
+        <g transform="translate(32, 28) scale(0.18)">
+          <polygon points="0,-120 52,-93 0,-66 -52,-93" fill="#FFD600" stroke="#07070f" stroke-width="4"/>
+          <polygon points="52,-93 104,-66 52,-39 0,-66" fill="#E6C200" stroke="#07070f" stroke-width="4"/>
+          <polygon points="104,-66 156,-39 104,-12 52,-39" fill="#FFD600" stroke="#07070f" stroke-width="4"/>
+          <polygon points="-52,-93 0,-66 -52,-39 -104,-66" fill="#E6C200" stroke="#07070f" stroke-width="4"/>
+          <polygon points="0,-66 52,-39 0,-12 -52,-39" fill="#FFD600" stroke="#07070f" stroke-width="4"/>
+          <polygon points="52,-39 104,-12 52,15 0,-12" fill="#E6C200" stroke="#07070f" stroke-width="4"/>
+          <polygon points="-104,-66 -52,-39 -104,-12 -156,-39" fill="#FFD600" stroke="#07070f" stroke-width="4"/>
+          <polygon points="-52,-39 0,-12 -52,15 -104,-12" fill="#E6C200" stroke="#07070f" stroke-width="4"/>
+          <polygon points="0,-12 52,15 0,42 -52,15" fill="#FFD600" stroke="#07070f" stroke-width="4"/>
+          <polygon points="-156,-39 -104,-12 -104,42 -156,15" fill="#E65100" stroke="#07070f" stroke-width="4"/>
+          <polygon points="-156,15 -104,42 -104,96 -156,69" fill="#BF4400" stroke="#07070f" stroke-width="4"/>
+          <polygon points="-156,69 -104,96 -104,150 -156,123" fill="#E65100" stroke="#07070f" stroke-width="4"/>
+          <polygon points="-104,-12 -52,15 -52,69 -104,42" fill="#BF4400" stroke="#07070f" stroke-width="4"/>
+          <polygon points="-104,42 -52,69 -52,123 -104,96" fill="#E65100" stroke="#07070f" stroke-width="4"/>
+          <polygon points="-104,96 -52,123 -52,177 -104,150" fill="#BF4400" stroke="#07070f" stroke-width="4"/>
+          <polygon points="-52,15 0,42 0,96 -52,69" fill="#E65100" stroke="#07070f" stroke-width="4"/>
+          <polygon points="-52,69 0,96 0,150 -52,123" fill="#BF4400" stroke="#07070f" stroke-width="4"/>
+          <polygon points="-52,123 0,150 0,204 -52,177" fill="#E65100" stroke="#07070f" stroke-width="4"/>
+          <polygon points="0,42 52,15 52,69 0,96" fill="#1565C0" stroke="#07070f" stroke-width="4"/>
+          <polygon points="0,96 52,69 52,123 0,150" fill="#0D47A1" stroke="#07070f" stroke-width="4"/>
+          <polygon points="0,150 52,123 52,177 0,204" fill="#1565C0" stroke="#07070f" stroke-width="4"/>
+          <polygon points="52,15 104,-12 104,42 52,69" fill="#2E7D32" stroke="#07070f" stroke-width="4"/>
+          <polygon points="52,69 104,42 104,96 52,123" fill="#1B5E20" stroke="#07070f" stroke-width="4"/>
+          <polygon points="52,123 104,96 104,150 52,177" fill="#2E7D32" stroke="#07070f" stroke-width="4"/>
+          <polygon points="104,-12 156,-39 156,15 104,42" fill="#C62828" stroke="#07070f" stroke-width="4"/>
+          <polygon points="104,42 156,15 156,69 104,96" fill="#B71C1C" stroke="#07070f" stroke-width="4"/>
+          <polygon points="104,96 156,69 156,123 104,150" fill="#C62828" stroke="#07070f" stroke-width="4"/>
+        </g>
+      </svg>
+      <div class="title">RUBIKSOLOGY</div>
+      <div class="sub">LOADING</div>
+      <div class="loader"></div>
+    </div>
+
     <div id="root"></div>
   </body>
 </html>

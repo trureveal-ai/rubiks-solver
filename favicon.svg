@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#07070f"/>
+  <g transform="translate(32, 28) scale(0.18)">
+    <!-- Top face (Yellow) -->
+    <polygon points="0,-120 52,-93 0,-66 -52,-93" fill="#FFD600" stroke="#07070f" stroke-width="4"/>
+    <polygon points="52,-93 104,-66 52,-39 0,-66" fill="#E6C200" stroke="#07070f" stroke-width="4"/>
+    <polygon points="104,-66 156,-39 104,-12 52,-39" fill="#FFD600" stroke="#07070f" stroke-width="4"/>
+    <polygon points="-52,-93 0,-66 -52,-39 -104,-66" fill="#E6C200" stroke="#07070f" stroke-width="4"/>
+    <polygon points="0,-66 52,-39 0,-12 -52,-39" fill="#FFD600" stroke="#07070f" stroke-width="4"/>
+    <polygon points="52,-39 104,-12 52,15 0,-12" fill="#E6C200" stroke="#07070f" stroke-width="4"/>
+    <polygon points="-104,-66 -52,-39 -104,-12 -156,-39" fill="#FFD600" stroke="#07070f" stroke-width="4"/>
+    <polygon points="-52,-39 0,-12 -52,15 -104,-12" fill="#E6C200" stroke="#07070f" stroke-width="4"/>
+    <polygon points="0,-12 52,15 0,42 -52,15" fill="#FFD600" stroke="#07070f" stroke-width="4"/>
+    <!-- Left face (Orange) -->
+    <polygon points="-156,-39 -104,-12 -104,42 -156,15" fill="#E65100" stroke="#07070f" stroke-width="4"/>
+    <polygon points="-156,15 -104,42 -104,96 -156,69" fill="#BF4400" stroke="#07070f" stroke-width="4"/>
+    <polygon points="-156,69 -104,96 -104,150 -156,123" fill="#E65100" stroke="#07070f" stroke-width="4"/>
+    <polygon points="-104,-12 -52,15 -52,69 -104,42" fill="#BF4400" stroke="#07070f" stroke-width="4"/>
+    <polygon points="-104,42 -52,69 -52,123 -104,96" fill="#E65100" stroke="#07070f" stroke-width="4"/>
+    <polygon points="-104,96 -52,123 -52,177 -104,150" fill="#BF4400" stroke="#07070f" stroke-width="4"/>
+    <polygon points="-52,15 0,42 0,96 -52,69" fill="#E65100" stroke="#07070f" stroke-width="4"/>
+    <polygon points="-52,69 0,96 0,150 -52,123" fill="#BF4400" stroke="#07070f" stroke-width="4"/>
+    <polygon points="-52,123 0,150 0,204 -52,177" fill="#E65100" stroke="#07070f" stroke-width="4"/>
+    <!-- Right face (Blue/Green/Red) -->
+    <polygon points="0,42 52,15 52,69 0,96" fill="#1565C0" stroke="#07070f" stroke-width="4"/>
+    <polygon points="0,96 52,69 52,123 0,150" fill="#0D47A1" stroke="#07070f" stroke-width="4"/>
+    <polygon points="0,150 52,123 52,177 0,204" fill="#1565C0" stroke="#07070f" stroke-width="4"/>
+    <polygon points="52,15 104,-12 104,42 52,69" fill="#2E7D32" stroke="#07070f" stroke-width="4"/>
+    <polygon points="52,69 104,42 104,96 52,123" fill="#1B5E20" stroke="#07070f" stroke-width="4"/>
+    <polygon points="52,123 104,96 104,150 52,177" fill="#2E7D32" stroke="#07070f" stroke-width="4"/>
+    <polygon points="104,-12 156,-39 156,15 104,42" fill="#C62828" stroke="#07070f" stroke-width="4"/>
+    <polygon points="104,42 156,15 156,69 104,96" fill="#B71C1C" stroke="#07070f" stroke-width="4"/>
+    <polygon points="104,96 156,69 156,123 104,150" fill="#C62828" stroke="#07070f" stroke-width="4"/>
+  </g>
+</svg>
