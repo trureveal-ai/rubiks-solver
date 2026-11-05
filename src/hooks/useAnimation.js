@@ -8,8 +8,7 @@ const SPEEDS = {
   fast:   { anim: 0.2, delay: 100 },
 };
 
-export default function useAnimation({ solution, startCube, cube }) {
-  const [phase, setPhase]           = useState("input");
+export default function useAnimation({ solution, startCube, cube, phase }) {
   const [step, setStep]             = useState(0);
   const [animIdx, setAnimIdx]       = useState(0);
   const [cubeFlash, setCubeFlash]   = useState(false);
@@ -79,14 +78,13 @@ export default function useAnimation({ solution, startCube, cube }) {
   };
 
   const resetAnimation = () => {
-    setPhase("input"); setStep(0); setPendingStep(null);
+    setStep(0); setPendingStep(null);
     setAnimTrigger(null); setPlayingSync(false);
   };
 
   const total = solution?.steps?.length || 0;
 
   return {
-    phase, setPhase,
     step, animIdx, cubeFlash, pendingStep,
     animTrigger, playing, playSpeed, setPlaySpeed,
     highlightFace, displayCube,
