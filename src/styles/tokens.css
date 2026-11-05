@@ -44,7 +44,13 @@
   --r-5: 12px;
   --r-6: 14px;
   --r-pill: 40px;
+
+  /* Typography — Inter for UI, monospace reserved for algorithm notation */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'Courier New', ui-monospace, 'SF Mono', Menlo, monospace;
 }
+
+body { font-family: var(--font-sans); }
 
 /* ── Global element rules (migrated from App's inline <style>) ─────────────── */
 * { box-sizing: border-box; }
@@ -54,7 +60,7 @@ input {
   color: #fff;
   border: 1px solid var(--border);
   border-radius: var(--r-2);
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono); /* algorithm input — notation stays monospace */
   outline: none;
 }
 input:focus { border-color: var(--accent); }

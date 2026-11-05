@@ -72,7 +72,7 @@ export default function App() {
     <div role="application" aria-label="Rubiksology Rubik's Cube Solver" style={{
       minHeight:"100vh", background: highContrast ? "#000" : "var(--bg)",
       backgroundImage: highContrast ? "none" : "radial-gradient(ellipse 80% 50% at 50% -10%, var(--bg-glow), transparent)",
-      color:"#fff", fontFamily:"'Courier New',monospace",
+      color:"#fff", fontFamily:"var(--font-sans)",
       display:"flex", flexDirection:"column", alignItems:"center",
       padding:"28px 16px 80px", userSelect:"none",
     }}>
@@ -80,7 +80,7 @@ export default function App() {
 
       {/* Header */}
       <header style={{textAlign:"center",marginBottom:22}} id="main-content">
-        <div style={{fontSize:9,letterSpacing:8,color:"#333",marginBottom:5}}>◈ KOCIEMBA · AI-POWERED ◈</div>
+        <div style={{fontSize:12,letterSpacing:1,color:"#333",marginBottom:5}}>◈ KOCIEMBA · AI-POWERED ◈</div>
         <h1 style={{
           fontSize:"clamp(1.6rem, 7vw, 2.4rem)", fontWeight:900, letterSpacing:"-1px", lineHeight:1, margin:0,
           background: highContrast ? "none" : "linear-gradient(100deg,var(--accent-2) 0%,var(--accent) 30%,var(--green) 60%,var(--blue) 100%)",
@@ -89,7 +89,7 @@ export default function App() {
         }}>RUBIKSOLOGY</h1>
         <button onClick={()=>setHighContrast(h=>!h)} aria-label={highContrast?"Disable high contrast mode":"Enable high contrast mode"} style={{
           marginTop:8, padding:"3px 10px", border:`1px solid ${highContrast?"#fff":"var(--border)"}`, borderRadius:4, background:"transparent",
-          color:highContrast?"#fff":"#333", fontFamily:"'Courier New',monospace", fontSize:7, letterSpacing:2, cursor:"pointer",
+          color:highContrast?"#fff":"#333", fontFamily:"var(--font-sans)", fontSize:11, letterSpacing:1, cursor:"pointer",
         }}>{highContrast ? "◉ HIGH CONTRAST ON" : "◎ HIGH CONTRAST"}</button>
       </header>
 
@@ -117,7 +117,7 @@ export default function App() {
       </div>
 
       {/* Version */}
-      <div style={{marginTop:40,fontSize:7,color:"var(--border)",letterSpacing:3,textAlign:"center"}}>
+      <div style={{marginTop:40,fontSize:11,color:"var(--border)",letterSpacing:1,textAlign:"center"}}>
         RUBIKSOLOGY v{__APP_VERSION__}
       </div>
 

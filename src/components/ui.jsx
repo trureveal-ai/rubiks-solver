@@ -4,7 +4,7 @@ export function NoWebGL({ width, height }) {
   return (
     <div style={{width,height,background:"var(--bg)",borderRadius:12,display:"flex",
       alignItems:"center",justifyContent:"center",color:"#666",
-      fontFamily:"'Courier New',monospace",fontSize:11,textAlign:"center",padding:20,
+      fontFamily:"var(--font-sans)",fontSize:11,textAlign:"center",padding:20,
       border:"1px solid var(--border)"}}>
       3D view requires WebGL<br/>Try Chrome or enable WebGL in your browser
     </div>
@@ -17,7 +17,7 @@ export function Toast({ message, visible }) {
     <div style={{
       position:"fixed", bottom:24, left:"50%", transform:`translateX(-50%) translateY(${visible?0:20}px)`,
       background:"var(--green)", color:"#fff", padding:"10px 24px", borderRadius:8,
-      fontFamily:"'Courier New',monospace", fontSize:11, letterSpacing:2,
+      fontFamily:"var(--font-sans)", fontSize:11, letterSpacing:1,
       opacity:visible?1:0, transition:"all .3s ease", pointerEvents:"none",
       zIndex:1000, boxShadow:"0 4px 20px rgba(0,0,0,.5)",
     }}>

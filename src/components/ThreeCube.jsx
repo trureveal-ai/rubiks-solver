@@ -12,7 +12,7 @@ class WebGLErrorBoundary extends Component {
   render() {
     if (this.state.failed) return (
       <div style={{display:'flex',alignItems:'center',justifyContent:'center',
-        width:'100%',height:'100%',color:'#888',fontFamily:"'Courier New',monospace",
+        width:'100%',height:'100%',color:'#888',fontFamily:"var(--font-sans)",
         fontSize:11,textAlign:'center',padding:20}}>
         3D view unavailable<br/>(WebGL not supported)
       </div>
