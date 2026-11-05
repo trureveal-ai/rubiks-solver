@@ -70,42 +70,25 @@ export default function App() {
 
   return (
     <div role="application" aria-label="Rubiksology Rubik's Cube Solver" style={{
-      minHeight:"100vh", background: highContrast ? "#000" : "#07070f",
-      backgroundImage: highContrast ? "none" : "radial-gradient(ellipse 80% 50% at 50% -10%, #0f0f2a, transparent)",
+      minHeight:"100vh", background: highContrast ? "#000" : "var(--bg)",
+      backgroundImage: highContrast ? "none" : "radial-gradient(ellipse 80% 50% at 50% -10%, var(--bg-glow), transparent)",
       color:"#fff", fontFamily:"'Courier New',monospace",
       display:"flex", flexDirection:"column", alignItems:"center",
       padding:"28px 16px 80px", userSelect:"none",
     }}>
-      <a href="#main-content" style={{position:"absolute",top:"-40px",left:0,background:"#FFD600",color:"#000",padding:"8px 16px",zIndex:9999,fontSize:12,transition:"top .2s"}} onFocus={e=>{e.target.style.top="0"}} onBlur={e=>{e.target.style.top="-40px"}}>Skip to content</a>
-      <style>{`
-        @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
-        @keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes flash{0%,100%{opacity:1}50%{opacity:.4}}
-        @keyframes glow{0%,100%{box-shadow:0 0 0px #FFD60000}50%{box-shadow:0 0 32px #FFD60066}}
-        *{box-sizing:border-box;}
-        input{background:#0d0d18;color:#fff;border:1px solid #1a1a2e;border-radius:6px;font-family:'Courier New',monospace;outline:none;}
-        input:focus{border-color:#FFD600;}
-        button:hover:not(:disabled){filter:brightness(1.15);}
-        button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
-        button:focus-visible,input:focus-visible{outline:2px solid #FFD600;outline-offset:2px;}
-        ${highContrast ? `
-          .hc-border{border-color:#fff !important;}
-          .hc-text{color:#fff !important;}
-        ` : ""}
-      `}</style>
+      <a href="#main-content" style={{position:"absolute",top:"-40px",left:0,background:"var(--accent)",color:"#000",padding:"8px 16px",zIndex:9999,fontSize:12,transition:"top .2s"}} onFocus={e=>{e.target.style.top="0"}} onBlur={e=>{e.target.style.top="-40px"}}>Skip to content</a>
 
       {/* Header */}
       <header style={{textAlign:"center",marginBottom:22}} id="main-content">
         <div style={{fontSize:9,letterSpacing:8,color:"#333",marginBottom:5}}>◈ KOCIEMBA · AI-POWERED ◈</div>
         <h1 style={{
           fontSize:"clamp(1.6rem, 7vw, 2.4rem)", fontWeight:900, letterSpacing:"-1px", lineHeight:1, margin:0,
-          background: highContrast ? "none" : "linear-gradient(100deg,#E65100 0%,#FFD600 30%,#2E7D32 60%,#1565C0 100%)",
+          background: highContrast ? "none" : "linear-gradient(100deg,var(--accent-2) 0%,var(--accent) 30%,var(--green) 60%,var(--blue) 100%)",
           WebkitBackgroundClip: highContrast ? "unset" : "text",
           WebkitTextFillColor: highContrast ? "#fff" : "transparent",
         }}>RUBIKSOLOGY</h1>
         <button onClick={()=>setHighContrast(h=>!h)} aria-label={highContrast?"Disable high contrast mode":"Enable high contrast mode"} style={{
-          marginTop:8, padding:"3px 10px", border:`1px solid ${highContrast?"#fff":"#1a1a2e"}`, borderRadius:4, background:"transparent",
+          marginTop:8, padding:"3px 10px", border:`1px solid ${highContrast?"#fff":"var(--border)"}`, borderRadius:4, background:"transparent",
           color:highContrast?"#fff":"#333", fontFamily:"'Courier New',monospace", fontSize:7, letterSpacing:2, cursor:"pointer",
         }}>{highContrast ? "◉ HIGH CONTRAST ON" : "◎ HIGH CONTRAST"}</button>
       </header>
@@ -134,7 +117,7 @@ export default function App() {
       </div>
 
       {/* Version */}
-      <div style={{marginTop:40,fontSize:7,color:"#1a1a2e",letterSpacing:3,textAlign:"center"}}>
+      <div style={{marginTop:40,fontSize:7,color:"var(--border)",letterSpacing:3,textAlign:"center"}}>
         RUBIKSOLOGY v{__APP_VERSION__}
       </div>
 

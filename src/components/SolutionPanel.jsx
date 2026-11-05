@@ -20,10 +20,10 @@ export default function SolutionPanel({ solution, anim, cameraPreset, setCameraP
     <div style={{width:"100%",maxWidth:520,animation:"up .4s ease"}}>
 
       {/* Live 3D cube */}
-      <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:20,background:"#08080f",border:"1px solid #1a1a2e",borderRadius:14,padding:"20px 16px 16px",animation:anim.cubeFlash?"glow .35s ease":"none"}}>
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:20,background:"var(--surface-2)",border:"1px solid var(--border)",borderRadius:14,padding:"20px 16px 16px",animation:anim.cubeFlash?"glow .35s ease":"none"}}>
         <div style={{fontSize:7,color:"#444",letterSpacing:4,marginBottom:14,textAlign:"center"}}>
           LIVE CUBE — {anim.step} OF {total} MOVES APPLIED
-          {anim.highlightFace&&<span style={{color:FACE_COLOR[anim.highlightFace]||"#FFD600",marginLeft:8}}>[ {FLABEL[anim.highlightFace]} FACE ]</span>}
+          {anim.highlightFace&&<span style={{color:FACE_COLOR[anim.highlightFace]||"var(--accent)",marginLeft:8}}>[ {FLABEL[anim.highlightFace]} FACE ]</span>}
         </div>
         <div style={{width:"100%",maxWidth:320,aspectRatio:"1"}}>
           {hasWebGL ? <ThreeCube cube={anim.displayCube} width="100%" height="100%" animTrigger={anim.animTrigger} onAnimationDone={anim.handleAnimDone} animDuration={anim.SPEEDS[anim.playSpeed].anim} cameraPreset={cameraPreset}/> : <NoWebGL width="100%" height="100%"/>}
@@ -34,28 +34,28 @@ export default function SolutionPanel({ solution, anim, cameraPreset, setCameraP
           <span style={{fontSize:7,color:"#333",letterSpacing:2,marginRight:4}}>VIEW</span>
           {Object.entries(CAMERA_PRESETS).map(([key,{label,name}])=>(
             <button key={key} onClick={()=>setCameraPreset(key)} aria-label={`${name} camera view`} title={name} style={{
-              width:28, height:24, border:`1px solid ${cameraPreset===key?"#FFD600":"#1a1a2e"}`, borderRadius:4,
-              background:cameraPreset===key?"#FFD60018":"transparent", color:cameraPreset===key?"#FFD600":"#444",
+              width:28, height:24, border:`1px solid ${cameraPreset===key?"var(--accent)":"var(--border)"}`, borderRadius:4,
+              background:cameraPreset===key?"#FFD60018":"transparent", color:cameraPreset===key?"var(--accent)":"#444",
               fontFamily:"'Courier New',monospace", fontSize:9, cursor:"pointer", fontWeight:cameraPreset===key?900:400,
             }}>{label}</button>
           ))}
         </div>
 
         <div style={{display:"flex",gap:4,marginTop:8,flexWrap:"wrap",justifyContent:"center",maxWidth:400}} role="progressbar" aria-valuenow={anim.step} aria-valuemin={0} aria-valuemax={total} aria-label={`Solution progress: step ${anim.step} of ${total}`}>
-          {solution.steps.map((_,i)=><div key={i} onClick={()=>anim.goStep(i+1)} aria-hidden="true" style={{height:5,width:i===anim.step-1?18:5,borderRadius:3,cursor:"pointer",background:i<anim.step?"#E65100":i===anim.step?"#FFD600":"#1a1a2e",transition:"all .2s",WebkitTapHighlightColor:"transparent"}}/>)}
+          {solution.steps.map((_,i)=><div key={i} onClick={()=>anim.goStep(i+1)} aria-hidden="true" style={{height:5,width:i===anim.step-1?18:5,borderRadius:3,cursor:"pointer",background:i<anim.step?"var(--accent-2)":i===anim.step?"var(--accent)":"var(--border)",transition:"all .2s",WebkitTapHighlightColor:"transparent"}}/>)}
         </div>
       </div>
 
       {/* Stats — redesigned with progress ring */}
-      <div style={{display:"flex",gap:12,alignItems:"center",background:"#0d0d18",border:"1px solid #1a1a2e",borderRadius:12,padding:"14px 16px",marginBottom:14}}>
+      <div style={{display:"flex",gap:12,alignItems:"center",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,padding:"14px 16px",marginBottom:14}}>
         <div style={{position:"relative",flexShrink:0}}>
-          <ProgressRing pct={pct} size={56} stroke={4} color={pct===100?"#2E7D32":"#FFD600"}/>
-          <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,color:pct===100?"#2E7D32":"#FFD600"}}>{pct}%</div>
+          <ProgressRing pct={pct} size={56} stroke={4} color={pct===100?"var(--green)":"var(--accent)"}/>
+          <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,color:pct===100?"var(--green)":"var(--accent)"}}>{pct}%</div>
         </div>
         <div style={{flex:1,display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 16px"}}>
           <div>
             <div style={{fontSize:7,color:"#555",letterSpacing:2}}>MOVES</div>
-            <div style={{fontSize:"1.1rem",fontWeight:900,color:"#FFD600"}}>{anim.step} / {total}</div>
+            <div style={{fontSize:"1.1rem",fontWeight:900,color:"var(--accent)"}}>{anim.step} / {total}</div>
           </div>
           <div>
             <div style={{fontSize:7,color:"#555",letterSpacing:2}}>TOTAL</div>
@@ -76,16 +76,16 @@ export default function SolutionPanel({ solution, anim, cameraPreset, setCameraP
 
       {/* Solution comparison / efficiency */}
       {solution.stats && (
-        <div style={{background:"#0d0d18",border:"1px solid #1a1a2e",borderRadius:12,padding:"12px 16px",marginBottom:14}} role="region" aria-label="Solution analysis">
+        <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,padding:"12px 16px",marginBottom:14}} role="region" aria-label="Solution analysis">
           <div style={{fontSize:7,color:"#555",letterSpacing:3,marginBottom:10}}>◈ SOLUTION ANALYSIS</div>
           <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
             <div style={{flex:1,minWidth:100}}>
               <div style={{fontSize:7,color:"#555",letterSpacing:2}}>ORIENTATIONS</div>
-              <div style={{fontSize:"0.9rem",fontWeight:700,color:"#FFD600"}}>{solution.stats.orientationsSearched} / 24</div>
+              <div style={{fontSize:"0.9rem",fontWeight:700,color:"var(--accent)"}}>{solution.stats.orientationsSearched} / 24</div>
             </div>
             <div style={{flex:1,minWidth:100}}>
               <div style={{fontSize:7,color:"#555",letterSpacing:2}}>EFFICIENCY</div>
-              <div style={{fontSize:"0.9rem",fontWeight:700,color:solution.totalMoves<=18?"#2E7D32":solution.totalMoves<=22?"#FFD600":"#E65100"}}>
+              <div style={{fontSize:"0.9rem",fontWeight:700,color:solution.totalMoves<=18?"var(--green)":solution.totalMoves<=22?"var(--accent)":"var(--accent-2)"}}>
                 {solution.totalMoves<=14?"EXCELLENT":solution.totalMoves<=18?"VERY GOOD":solution.totalMoves<=22?"GOOD":"FAIR"}
               </div>
             </div>
@@ -102,10 +102,10 @@ export default function SolutionPanel({ solution, anim, cameraPreset, setCameraP
       )}
 
       {/* Step card */}
-      <div key={anim.animIdx} style={{background:"#0d0d18",border:"1px solid #1a1a2e",borderRadius:14,padding:"20px 16px",marginBottom:16,animation:"up .35s ease"}}>
+      <div key={anim.animIdx} style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:14,padding:"20px 16px",marginBottom:16,animation:"up .35s ease"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:8}}>
           <div style={{padding:"4px 16px",borderRadius:20,background:sc+"18",border:`1px solid ${sc}33`,fontSize:8,letterSpacing:3,color:sc}}>{cur.stage.toUpperCase()}</div>
-          <button onClick={onCopy} style={{padding:"4px 12px",borderRadius:16,background:"transparent",border:"1px solid #1a1a2e",fontSize:7,letterSpacing:2,color:"#555",cursor:"pointer",fontFamily:"'Courier New',monospace"}} title="Copy solution to clipboard">📋 COPY</button>
+          <button onClick={onCopy} style={{padding:"4px 12px",borderRadius:16,background:"transparent",border:"1px solid var(--border)",fontSize:7,letterSpacing:2,color:"#555",cursor:"pointer",fontFamily:"'Courier New',monospace"}} title="Copy solution to clipboard">📋 COPY</button>
         </div>
         <MoveBadge move={cur.move} idx={anim.animIdx}/>
         {cur.move&&(
@@ -114,26 +114,26 @@ export default function SolutionPanel({ solution, anim, cameraPreset, setCameraP
           </div>
         )}
         <p style={{color:"#ccc",lineHeight:1.85,margin:"0 0 14px",fontSize:"0.87rem"}}>{cur.explain}</p>
-        {cur.tip&&<div style={{background:"#081408",border:"1px solid #0d260d",borderRadius:6,padding:"10px 14px",fontSize:"0.78rem",color:"#4a9",lineHeight:1.7}}>💡 {cur.tip}</div>}
+        {cur.tip&&<div style={{background:"var(--ok-bg)",border:"1px solid var(--ok-border)",borderRadius:6,padding:"10px 14px",fontSize:"0.78rem",color:"var(--tip)",lineHeight:1.7}}>💡 {cur.tip}</div>}
       </div>
 
       <NavigationControls anim={anim} total={total} />
 
       {/* All moves */}
       <details style={{marginBottom:18}}>
-        <summary style={{cursor:"pointer",fontSize:9,color:"#444",letterSpacing:3,padding:"10px 14px",background:"#0d0d18",border:"1px solid #1a1a2e",borderRadius:8,listStyle:"none",WebkitTapHighlightColor:"transparent"}}>▸ VIEW ALL {solution.totalMoves} MOVES</summary>
-        <div style={{background:"#08080f",border:"1px solid #1a1a2e",borderTop:"none",borderRadius:"0 0 8px 8px",maxHeight:200,overflowY:"auto",padding:6,WebkitOverflowScrolling:"touch"}}>
+        <summary style={{cursor:"pointer",fontSize:9,color:"#444",letterSpacing:3,padding:"10px 14px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:8,listStyle:"none",WebkitTapHighlightColor:"transparent"}}>▸ VIEW ALL {solution.totalMoves} MOVES</summary>
+        <div style={{background:"var(--surface-2)",border:"1px solid var(--border)",borderTop:"none",borderRadius:"0 0 8px 8px",maxHeight:200,overflowY:"auto",padding:6,WebkitOverflowScrolling:"touch"}}>
           {solution.steps.map((s,i)=>(
-            <div key={i} onClick={()=>anim.goStep(i+1)} style={{display:"flex",alignItems:"center",gap:12,padding:"7px 10px",borderRadius:5,cursor:"pointer",marginBottom:2,background:i===anim.step-1?"#1a1a2e":"transparent",borderLeft:`2px solid ${i===anim.step-1?"#FFD600":"transparent"}`,WebkitTapHighlightColor:"transparent"}}>
+            <div key={i} onClick={()=>anim.goStep(i+1)} style={{display:"flex",alignItems:"center",gap:12,padding:"7px 10px",borderRadius:5,cursor:"pointer",marginBottom:2,background:i===anim.step-1?"var(--border)":"transparent",borderLeft:`2px solid ${i===anim.step-1?"var(--accent)":"transparent"}`,WebkitTapHighlightColor:"transparent"}}>
               <span style={{color:"#333",fontSize:9,minWidth:20}}>{i+1}</span>
-              <span style={{color:"#FFD600",fontWeight:900,minWidth:60,fontSize:"0.82rem",letterSpacing:2}}>{s.move||"—"}</span>
+              <span style={{color:"var(--accent)",fontWeight:900,minWidth:60,fontSize:"0.82rem",letterSpacing:2}}>{s.move||"—"}</span>
               <span style={{color:"#555",fontSize:9,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.stage}</span>
             </div>
           ))}
         </div>
       </details>
 
-      <button onClick={onReset} style={{width:"100%",background:"transparent",border:"1px solid #1a1a2e",borderRadius:8,padding:11,color:"#444",fontFamily:"'Courier New',monospace",fontSize:9,letterSpacing:3,cursor:"pointer"}}>◂ START OVER</button>
+      <button onClick={onReset} style={{width:"100%",background:"transparent",border:"1px solid var(--border)",borderRadius:8,padding:11,color:"#444",fontFamily:"'Courier New',monospace",fontSize:9,letterSpacing:3,cursor:"pointer"}}>◂ START OVER</button>
     </div>
   );
 }

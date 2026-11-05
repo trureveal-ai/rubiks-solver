@@ -2,10 +2,10 @@
 
 export function NoWebGL({ width, height }) {
   return (
-    <div style={{width,height,background:"#07070f",borderRadius:12,display:"flex",
+    <div style={{width,height,background:"var(--bg)",borderRadius:12,display:"flex",
       alignItems:"center",justifyContent:"center",color:"#666",
       fontFamily:"'Courier New',monospace",fontSize:11,textAlign:"center",padding:20,
-      border:"1px solid #1a1a2e"}}>
+      border:"1px solid var(--border)"}}>
       3D view requires WebGL<br/>Try Chrome or enable WebGL in your browser
     </div>
   );
@@ -16,7 +16,7 @@ export function Toast({ message, visible }) {
   return (
     <div style={{
       position:"fixed", bottom:24, left:"50%", transform:`translateX(-50%) translateY(${visible?0:20}px)`,
-      background:"#2E7D32", color:"#fff", padding:"10px 24px", borderRadius:8,
+      background:"var(--green)", color:"#fff", padding:"10px 24px", borderRadius:8,
       fontFamily:"'Courier New',monospace", fontSize:11, letterSpacing:2,
       opacity:visible?1:0, transition:"all .3s ease", pointerEvents:"none",
       zIndex:1000, boxShadow:"0 4px 20px rgba(0,0,0,.5)",
@@ -27,13 +27,13 @@ export function Toast({ message, visible }) {
 }
 
 // ── Circular progress ring ──────────────────────────────────────
-export function ProgressRing({ pct, size=56, stroke=4, color="#FFD600" }) {
+export function ProgressRing({ pct, size=56, stroke=4, color="var(--accent)" }) {
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (pct / 100) * circ;
   return (
     <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#1a1a2e" strokeWidth={stroke}/>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--border)" strokeWidth={stroke}/>
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
         strokeDasharray={circ} strokeDashoffset={offset}
         strokeLinecap="round" style={{transition:"stroke-dashoffset .4s ease"}}/>
