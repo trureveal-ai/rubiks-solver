@@ -1,0 +1,85 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Design tokens — single source of truth for the UI chrome palette, spacing,
+   and radii. Cube-face/sticker colors are domain data and live in engine/cube.js.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --bg: #07070f;
+  --bg-glow: #0f0f2a;
+  --surface: #0d0d18;
+  --surface-2: #08080f;
+  --border: #1a1a2e;
+  --border-2: #2a2a4e;
+
+  /* Brand / semantic */
+  --accent: #FFD600;   /* yellow — primary */
+  --accent-2: #E65100; /* deep orange */
+  --orange: #FF6D00;   /* phase 1 / warning */
+  --green: #2E7D32;    /* ok / solved */
+  --blue: #1565C0;     /* phase 2 / info */
+  --red: #C62828;      /* danger / cancel */
+
+  /* Validation states */
+  --err-bg: #180808;
+  --err-border: #3a1a1a;
+  --err: #ff5555;
+  --err-2: #ff7777;
+  --ok-bg: #081408;
+  --ok-border: #0d260d;
+  --tip: #4a9;
+
+  /* Spacing scale */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+
+  /* Radii */
+  --r-1: 4px;
+  --r-2: 6px;
+  --r-3: 8px;
+  --r-4: 10px;
+  --r-5: 12px;
+  --r-6: 14px;
+  --r-pill: 40px;
+
+  /* Typography — Inter for UI, monospace reserved for algorithm notation */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'Courier New', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+body { font-family: var(--font-sans); }
+
+/* ── Global element rules (migrated from App's inline <style>) ─────────────── */
+* { box-sizing: border-box; }
+
+input {
+  background: var(--surface);
+  color: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  font-family: var(--font-mono); /* algorithm input — notation stays monospace */
+  outline: none;
+}
+input:focus { border-color: var(--accent); }
+
+button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+button:hover:not(:disabled) { filter: brightness(1.15); }
+button:active:not(:disabled) { filter: brightness(0.92); }
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+@keyframes up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+@keyframes glow { 0%, 100% { box-shadow: 0 0 0px #FFD60000; } 50% { box-shadow: 0 0 32px #FFD60066; } }

@@ -2,12 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { cubeToKociemba } from "../engine/kociemba.js";
 import { copyCube, MOVE_DESC } from "../engine/cube.js";
 
-// Persistent solver worker — created once, pruning tables built on first solve
-const solverWorker = new Worker(
-  new URL('../engine/solve.worker.js', import.meta.url),
-  { type: 'module' }
-);
-
 // Extended move descriptions with richer text
 const MOVE_EXPLAIN = {
   "U":  "Rotate the top (U) face 90° clockwise",
@@ -75,20 +69,34 @@ function categorizeSteps(moves) {
   });
 }
 
+function createSolverWorker() {
+  return new Worker(
+    new URL('../engine/solve.worker.js', import.meta.url),
+    { type: 'module' }
+  );
+}
+
 export default function useSolver() {
   const [kStatus, setKStatus] = useState("loading");
   const [initProgress, setInitProgress] = useState(null);
   const [solveProgress, setSolveProgress] = useState(null);
   const [solveStats, setSolveStats] = useState(null);
-  const solvingRef = useRef(false);
+
+  const workerRef = useRef(null);
+  const readyRef = useRef(false);        // worker finished building tables?
+  const pendingReject = useRef(null);    // reject fn of an in-flight solve
+  const mountedRef = useRef(true);
   const solveStartRef = useRef(0);
 
-  // Initialize solver via persistent worker
-  useEffect(() => {
-    let mounted = true;
-    const handler = ({ data }) => {
-      if (!mounted) return;
+  // Spin up a fresh worker and kick off table initialization.
+  // Used at mount and again after a cancel (which hard-terminates the old one).
+  const spawnWorker = useCallback(() => {
+    const worker = createSolverWorker();
+    readyRef.current = false;
+    const lifecycle = ({ data }) => {
+      if (!mountedRef.current) return;
       if (data.type === 'ready') {
+        readyRef.current = true;
         setKStatus('ready');
         setInitProgress(null);
       } else if (data.type === 'initProgress') {
@@ -98,24 +106,40 @@ export default function useSolver() {
           done: data.done,
           total: data.total,
         });
-      } else if (data.type === 'error' && kStatus === 'loading') {
+      } else if (data.type === 'error' && !readyRef.current) {
+        // Only an init-time failure means the solver is unavailable; a solve-time
+        // error (e.g. parity) is handled by the per-solve handler below.
         setKStatus('error');
       }
     };
-    solverWorker.addEventListener('message', handler);
-    solverWorker.postMessage({ type: 'init' });
+    worker.addEventListener('message', lifecycle);
+    worker.postMessage({ type: 'init' });
+    workerRef.current = worker;
     setKStatus('initializing');
-    return () => { mounted = false; solverWorker.removeEventListener('message', handler); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    setInitProgress(null);
+    return worker;
+  }, []);
+
+  // Initialize solver on mount; terminate on unmount.
+  useEffect(() => {
+    mountedRef.current = true;
+    spawnWorker();
+    return () => {
+      mountedRef.current = false;
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    };
+  }, [spawnWorker]);
 
   const solve = useCallback(async (cube) => {
-    solvingRef.current = true;
     setSolveProgress(null);
     setSolveStats(null);
     solveStartRef.current = performance.now();
 
+    const worker = workerRef.current;
     const facelets = cubeToKociemba(cube);
     const result = await new Promise((resolve, reject) => {
+      pendingReject.current = reject;
       const handler = ({ data }) => {
         if (data.type === 'solveProgress') {
           setSolveProgress({
@@ -128,16 +152,16 @@ export default function useSolver() {
           return; // Don't remove handler — keep listening
         }
         if (data.type === 'solution' || data.type === 'error' || data.type === 'cancelled') {
-          solverWorker.removeEventListener('message', handler);
-          solvingRef.current = false;
+          worker.removeEventListener('message', handler);
+          pendingReject.current = null;
           setSolveProgress(null);
           if (data.type === 'solution') resolve(data);
           else if (data.type === 'cancelled') reject(new Error('cancelled'));
           else reject(new Error(data.message || 'Worker error'));
         }
       };
-      solverWorker.addEventListener('message', handler);
-      solverWorker.postMessage({ type: 'solve', facelets, multiOrientation: true });
+      worker.addEventListener('message', handler);
+      worker.postMessage({ type: 'solve', facelets, multiOrientation: true });
     });
 
     const solveTime = performance.now() - solveStartRef.current;
@@ -157,11 +181,18 @@ export default function useSolver() {
     };
   }, []);
 
+  // The solve runs as one synchronous blob inside the worker, so it can't read a
+  // cancel message mid-search (and SharedArrayBuffer isn't available without
+  // COOP/COEP headers on GitHub Pages). Hard-terminate the worker to stop it for
+  // real, reject the in-flight solve, and spin up a fresh one in the background.
   const cancel = useCallback(() => {
-    if (solvingRef.current) {
-      solverWorker.postMessage({ type: 'cancel' });
-    }
-  }, []);
+    const reject = pendingReject.current;
+    pendingReject.current = null;
+    workerRef.current?.terminate();
+    setSolveProgress(null);
+    spawnWorker();
+    if (reject) reject(new Error('cancelled'));
+  }, [spawnWorker]);
 
   return { kStatus, solve, cancel, initProgress, solveProgress, solveStats };
 }

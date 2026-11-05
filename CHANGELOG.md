@@ -7,6 +7,24 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.7.0] — 2026-11-04
+
+Wave 1 of the v2.0 roadmap — foundation refactor that later waves build on. No user-facing feature changes beyond the cancel fix; the UI was restructured, re-themed, and re-typed.
+
+### Added
+- **CSS design tokens** — `src/styles/tokens.css` is now the single source of truth for the UI chrome palette, spacing, and radii (`:root` custom properties)
+- **Global interaction states** — `:hover`, `:active`, and `:focus-visible` rules, token-driven
+- **Inter typeface** — imported from Google Fonts for all UI text
+
+### Changed
+- **App.jsx decomposed** 583 → 145 lines: extracted `InputPanel`, `SolvingPanel`, `SolutionPanel`, `NavigationControls`; added a `useReducer` phase state machine (`src/state/phaseMachine.js`); keyboard shortcuts moved to `useKeyboardShortcuts`
+- **Typography** — Inter for UI, monospace reserved strictly for algorithm notation; label text floored at 11px and body at 13px; letter-spacing reduced
+
+### Fixed
+- **Cancel now actually aborts an in-progress solve** — previously the solve kept running in the worker and the completed result would resurface the solution screen ~25s after cancelling. The worker is now hard-terminated on cancel and a fresh one re-initializes in the background.
+
+---
+
 ## [1.6.0] — 2026-11-04
 
 ### Added
