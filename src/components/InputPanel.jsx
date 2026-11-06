@@ -2,7 +2,7 @@ import {
   C, NAMES, PAL, FLABEL, ALL_MOVES,
 } from "../engine/cube.js";
 import FlatFace from "./FlatFace.jsx";
-import ThreeCube from "./ThreeCube.jsx";
+import ThreeCubeLazy from "./ThreeCubeLazy.jsx";
 import ScrambleBanner from "./ScrambleBanner.jsx";
 import { NoWebGL, hasWebGL } from "./ui.jsx";
 
@@ -138,7 +138,7 @@ export default function InputPanel({ cs, solver, onSolve, onReset }) {
         <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
           <div style={{fontSize:12,color:"#444",letterSpacing:1,marginBottom:12}}>DRAG TO ROTATE</div>
           <div style={{marginBottom:24,width:"100%",maxWidth:360,aspectRatio:"1"}}>
-            {hasWebGL ? <ThreeCube cube={cs.cube} width="100%" height="100%" animTrigger={cs.paintAnimTrigger} onAnimationDone={cs.handlePaintAnimDone} animDuration={0.35}/> : <NoWebGL width="100%" height="100%"/>}
+            {hasWebGL ? <ThreeCubeLazy cube={cs.cube} width="100%" height="100%" animTrigger={cs.paintAnimTrigger} onAnimationDone={cs.handlePaintAnimDone} animDuration={0.35}/> : <NoWebGL width="100%" height="100%"/>}
           </div>
           <div style={{width:"100%",background:"var(--surface-2)",border:"1px solid var(--border)",borderRadius:10,padding:14}}>
             <div style={{fontSize:11,color:"#555",letterSpacing:1,marginBottom:12,textAlign:"center"}}>INTERACTIVE FACE ROTATIONS</div>

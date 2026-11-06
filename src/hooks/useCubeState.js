@@ -4,14 +4,32 @@ import {
   generateScramble,
 } from "../engine/cube.js";
 import { validateCube } from "../engine/validate.js";
+import { loadStored, saveStored } from "./persist.js";
+
+const FACES = ["U", "D", "F", "B", "R", "L"];
+
+// Guard a persisted cube back into a known-good shape before trusting it.
+function isValidCubeShape(c) {
+  return !!c && typeof c === "object"
+    && FACES.every(f => Array.isArray(c[f]) && c[f].length === 9
+      && c[f].every(s => PAL.includes(s)));
+}
+
+function loadCube() {
+  const stored = loadStored("cube", null);
+  return isValidCubeShape(stored) ? stored : initCube();
+}
 
 export default function useCubeState() {
-  const [cube, setCube]               = useState(initCube);
+  const [cube, setCube]               = useState(loadCube);
   const [history, setHistory]         = useState([]);
-  const [selColor, setSelColor]       = useState("R");
+  const [selColor, setSelColor]       = useState(() => {
+    const s = loadStored("selColor", "R");
+    return PAL.includes(s) ? s : "R";
+  });
   const [cycleMode, setCycleMode]     = useState(false);
   const [painting, setPainting]       = useState(false);
-  const [flatLayout, setFlatLayout]   = useState("cross");
+  const [flatLayout, setFlatLayout]   = useState(() => loadStored("flatLayout", "cross"));
   const [tab, setTab]                 = useState("paint");
   const [err, setErr]                 = useState("");
   const [scrambleSeq, setScrambleSeq] = useState(null);
@@ -28,6 +46,11 @@ export default function useCubeState() {
 
   // Validation
   useEffect(() => { setValidationErrs(validateCube(cube)); }, [cube]);
+
+  // Persist cube + UI prefs across reloads (best-effort, private-mode safe).
+  useEffect(() => { saveStored("cube", cube); }, [cube]);
+  useEffect(() => { saveStored("selColor", selColor); }, [selColor]);
+  useEffect(() => { saveStored("flatLayout", flatLayout); }, [flatLayout]);
 
   // Mouse-up ends painting
   useEffect(() => {
