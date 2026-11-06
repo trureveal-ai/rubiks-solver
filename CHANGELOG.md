@@ -7,6 +7,24 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.8.0] — 2026-11-06
+
+Wave 2 of the v2.0 roadmap — core improvements, built as four parallel agents in isolated worktrees and integrated together.
+
+### Added
+- **IndexedDB table cache** — the Kociemba move/pruning tables are cached after first build; warm solver init drops from ~2.2s to ~0.3s (~8×), including the post-cancel worker respawn
+- **Lazy-loaded 3D** — Three.js is split into its own chunk loaded on demand; the main bundle drops from ~1,025 kB to ~216 kB
+- **localStorage persistence** — cube state, paint color, layout, and play speed survive reloads (all access try/catch-guarded)
+- **Session timer stats** — best / session mean / count and WCA-style ao5 / ao12 with a recent-trend indicator, persisted across the session
+- **URL cube sharing** — a "Share cube" button encodes the cube into a ~24-char `?cube=` link that restores on load
+- **3D polish** — beveled cubies (RoundedBox), a studio environment (procedural Lightformer rig, no network dependency), inset rounded stickers, camera zoom + reset + auto-rotate, and a solve celebration (confetti at 100%)
+- **Tooling** — ESLint (flat config) + Prettier + Vitest (21 unit tests), and a GitHub Actions CI workflow (lint + test + build on push/PR)
+
+### Changed
+- Three.js constants (`CAMERA_PRESETS`, `MOVE_ANIM`) are consumed from a three-free module so the lazy split holds
+
+---
+
 ## [1.7.0] — 2026-11-04
 
 Wave 1 of the v2.0 roadmap — foundation refactor that later waves build on. No user-facing feature changes beyond the cancel fix; the UI was restructured, re-themed, and re-typed.
