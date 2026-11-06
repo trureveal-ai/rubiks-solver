@@ -1,4 +1,4 @@
-import { useState, useCallback, useReducer, useRef } from "react";
+import { useState, useCallback, useReducer, useRef, useEffect } from "react";
 import InputPanel from "./components/InputPanel.jsx";
 import SolvingPanel from "./components/SolvingPanel.jsx";
 import SolutionPanel from "./components/SolutionPanel.jsx";
@@ -8,11 +8,15 @@ import useCubeState from "./hooks/useCubeState.js";
 import useSolver from "./hooks/useSolver.js";
 import useAnimation from "./hooks/useAnimation.js";
 import useKeyboardShortcuts from "./hooks/useKeyboardShortcuts.js";
+import useTimerStats from "./hooks/useTimerStats.js";
+import useUrlState from "./hooks/useUrlState.js";
 import { phaseReducer, INITIAL_PHASE, PHASES, PHASE_ACTIONS } from "./state/phaseMachine.js";
 
 export default function App() {
   const cs = useCubeState();
   const solver = useSolver();
+  const timerStats = useTimerStats();
+  const urlState = useUrlState();
 
   const [phase, dispatch] = useReducer(phaseReducer, INITIAL_PHASE);
   const [solution, setSolution] = useState(null);
@@ -25,6 +29,13 @@ export default function App() {
   const anim = useAnimation({ solution, startCube, cube: cs.cube, phase });
 
   useKeyboardShortcuts({ anim, solution, phase });
+
+  // Restore a shared cube from the URL on first load (if present & well-formed).
+  useEffect(() => {
+    const restored = urlState.readInitialCube();
+    if (restored) cs.setCube(restored);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showToast = useCallback((message) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -41,12 +52,26 @@ export default function App() {
     );
   }, [solution, showToast]);
 
+  const handleShare = useCallback(() => {
+    const shareUrl = urlState.buildShareUrl(cs.cube);
+    if (!shareUrl) { showToast("⚠ CANNOT SHARE CUBE"); return; }
+    urlState.writeCubeToUrl(cs.cube); // reflect in the address bar too
+    navigator.clipboard.writeText(shareUrl).then(
+      () => showToast("✓ SHARE LINK COPIED"),
+      () => showToast("⚠ COPY FAILED"),
+    );
+  }, [urlState, cs.cube, showToast]);
+
   const handleSolve = async () => {
     dispatch(PHASE_ACTIONS.SOLVE_START); cs.setErr("");
     try {
       const result = await solver.solve(cs.cube);
       setSolution(result.solution);
       setStartCube(result.startCube);
+      // Record this completed solve once (here, not in render) to feed session stats.
+      if (result.solution?.stats?.solveTimeMs != null) {
+        timerStats.recordSolve(result.solution.stats.solveTimeMs);
+      }
       anim.resetAnimation();
       dispatch(PHASE_ACTIONS.SOLVE_SUCCESS);
     } catch (e) {
@@ -87,10 +112,16 @@ export default function App() {
           WebkitBackgroundClip: highContrast ? "unset" : "text",
           WebkitTextFillColor: highContrast ? "#fff" : "transparent",
         }}>RUBIKSOLOGY</h1>
-        <button onClick={()=>setHighContrast(h=>!h)} aria-label={highContrast?"Disable high contrast mode":"Enable high contrast mode"} style={{
-          marginTop:8, padding:"3px 10px", border:`1px solid ${highContrast?"#fff":"var(--border)"}`, borderRadius:4, background:"transparent",
-          color:highContrast?"#fff":"#333", fontFamily:"var(--font-sans)", fontSize:11, letterSpacing:1, cursor:"pointer",
-        }}>{highContrast ? "◉ HIGH CONTRAST ON" : "◎ HIGH CONTRAST"}</button>
+        <div style={{marginTop:8,display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+          <button onClick={()=>setHighContrast(h=>!h)} aria-label={highContrast?"Disable high contrast mode":"Enable high contrast mode"} style={{
+            padding:"3px 10px", border:`1px solid ${highContrast?"#fff":"var(--border)"}`, borderRadius:4, background:"transparent",
+            color:highContrast?"#fff":"#333", fontFamily:"var(--font-sans)", fontSize:11, letterSpacing:1, cursor:"pointer",
+          }}>{highContrast ? "◉ HIGH CONTRAST ON" : "◎ HIGH CONTRAST"}</button>
+          <button onClick={handleShare} aria-label="Copy a shareable link to this cube" title="Copy a shareable link to this cube" style={{
+            padding:"3px 10px", border:"1px solid var(--border)", borderRadius:4, background:"transparent",
+            color:"#333", fontFamily:"var(--font-sans)", fontSize:11, letterSpacing:1, cursor:"pointer",
+          }}>⇪ SHARE CUBE</button>
+        </div>
       </header>
 
       {phase===PHASES.INPUT && (
@@ -106,6 +137,7 @@ export default function App() {
           solution={solution} anim={anim}
           cameraPreset={cameraPreset} setCameraPreset={setCameraPreset}
           onCopy={copySolution} onReset={reset}
+          sessionStats={timerStats}
         />
       )}
 
