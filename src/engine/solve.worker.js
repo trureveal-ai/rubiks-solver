@@ -1,11 +1,34 @@
-import { initKociemba, solveFromFacelets, cancelSolve } from './kociemba.js';
+import {
+  initKociemba, solveFromFacelets, cancelSolve,
+  SOLVER_TABLES_VERSION, getSolverTables, hydrateSolverTables,
+} from './kociemba.js';
+import { loadCachedTables, saveCachedTables } from './indexeddb-cache.js';
 
 let ready = false;
 
 async function ensureReady(onProgress) {
-  if (!ready) {
-    await initKociemba(() => {}, onProgress);
+  if (ready) return;
+
+  // Fast path: hydrate prebuilt tables from IndexedDB and skip the ~1.5s build.
+  let cached = null;
+  try {
+    cached = await loadCachedTables(SOLVER_TABLES_VERSION);
+  } catch {
+    cached = null;
+  }
+  if (cached && hydrateSolverTables(cached)) {
+    onProgress({ phase: 'cache', table: 'all', done: 1, total: 1 });
     ready = true;
+    return;
+  }
+
+  // Cache miss: build the tables, then persist them for next time.
+  await initKociemba(() => {}, onProgress);
+  ready = true;
+  try {
+    await saveCachedTables(SOLVER_TABLES_VERSION, getSolverTables());
+  } catch {
+    /* non-fatal: solver already works, caching is best-effort */
   }
 }
 

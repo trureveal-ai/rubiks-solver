@@ -1,5 +1,5 @@
 import { FACE_COLOR, FLABEL, MOVE_DESC } from "../engine/cube.js";
-import ThreeCube, { CAMERA_PRESETS } from "./ThreeCube.jsx";
+import ThreeCubeLazy, { CAMERA_PRESETS } from "./ThreeCubeLazy.jsx";
 import MoveBadge from "./MoveBadge.jsx";
 import NavigationControls from "./NavigationControls.jsx";
 import { NoWebGL, ProgressRing, formatTime, hasWebGL } from "./ui.jsx";
@@ -26,7 +26,7 @@ export default function SolutionPanel({ solution, anim, cameraPreset, setCameraP
           {anim.highlightFace&&<span style={{color:FACE_COLOR[anim.highlightFace]||"var(--accent)",marginLeft:8}}>[ {FLABEL[anim.highlightFace]} FACE ]</span>}
         </div>
         <div style={{width:"100%",maxWidth:320,aspectRatio:"1"}}>
-          {hasWebGL ? <ThreeCube cube={anim.displayCube} width="100%" height="100%" animTrigger={anim.animTrigger} onAnimationDone={anim.handleAnimDone} animDuration={anim.SPEEDS[anim.playSpeed].anim} cameraPreset={cameraPreset}/> : <NoWebGL width="100%" height="100%"/>}
+          {hasWebGL ? <ThreeCubeLazy cube={anim.displayCube} width="100%" height="100%" animTrigger={anim.animTrigger} onAnimationDone={anim.handleAnimDone} animDuration={anim.SPEEDS[anim.playSpeed].anim} cameraPreset={cameraPreset}/> : <NoWebGL width="100%" height="100%"/>}
         </div>
 
         {/* Camera presets */}

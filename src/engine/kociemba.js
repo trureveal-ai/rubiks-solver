@@ -418,6 +418,38 @@ Cube.initSolver = function(onProgress) {
   Cube._onProgress = null;
 };
 
+// ─── Table cache interface (used by solve.worker.js + indexeddb-cache.js) ─────
+// Version string for the cached tables. Combines a manual revision with the
+// structural size constants so any algorithm change that alters a table's shape
+// automatically invalidates a stale cache. Bump CACHE_REV for logic changes that
+// keep the same sizes.
+const CACHE_REV = 1;
+export const SOLVER_TABLES_VERSION =
+  `r${CACHE_REV}-${N_TWIST}.${N_FLIP}.${N_FRtoBR}.${N_URFtoDLF}.${N_URtoDF}.${N_URtoUL}.${N_UBtoDF}`;
+
+// True once every move + pruning table is populated.
+export function areSolverTablesReady() {
+  return Object.values(Cube.moveTables).every(t => t !== null)
+    && Object.values(Cube.pruningTables).every(t => t !== null);
+}
+
+// Snapshot the built tables for persistence.
+export function getSolverTables() {
+  return { moveTables: Cube.moveTables, pruningTables: Cube.pruningTables };
+}
+
+// Hydrate the solver from cached tables, skipping the ~1.5s rebuild.
+export function hydrateSolverTables({ moveTables, pruningTables }) {
+  if (!moveTables || !pruningTables) return false;
+  for (const name of Object.keys(Cube.moveTables)) {
+    if (moveTables[name] != null) Cube.moveTables[name] = moveTables[name];
+  }
+  for (const name of Object.keys(Cube.pruningTables)) {
+    if (pruningTables[name] != null) Cube.pruningTables[name] = pruningTables[name];
+  }
+  return areSolverTablesReady();
+}
+
 // Cancellation flag — set to true to abort an in-progress solve
 Cube._cancelled = false;
 
