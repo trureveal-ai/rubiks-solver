@@ -10,7 +10,7 @@ import prettier from 'eslint-config-prettier';
 // undefined references, unused variables, and React hooks correctness.
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', 'public/**', 'coverage/**'],
+    ignores: ['dist/**', 'node_modules/**', 'public/**', 'coverage/**', '.claude/**'],
   },
 
   js.configs.recommended,
