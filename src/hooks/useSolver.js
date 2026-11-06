@@ -27,7 +27,7 @@ const MOVE_EXPLAIN = {
 // Phase 2 moves (G1 subgroup moves)
 const PHASE2_MOVES = new Set(['U', "U'", 'U2', 'D', "D'", 'D2', 'R2', 'L2', 'F2', 'B2']);
 
-function categorizeSteps(moves) {
+export function categorizeSteps(moves) {
   if (moves.length === 0) {
     return [{ n: 1, stage: "Solved!", move: "", explain: "Your cube is already solved!", tip: "" }];
   }
