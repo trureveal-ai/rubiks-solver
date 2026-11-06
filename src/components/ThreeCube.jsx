@@ -1,6 +1,6 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { useMemo, useState, useRef, useEffect, useCallback, useImperativeHandle, forwardRef, Component } from "react";
+import { useMemo, useState, useRef, useEffect, Component } from "react";
 import * as THREE from "three";
 import { C } from "../engine/cube.js";
 

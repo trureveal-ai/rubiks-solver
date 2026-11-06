@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
-  PAL, initCube, copyCube, MOVE_FN, ALL_MOVES,
-  generateScramble, applyMoveString,
+  PAL, initCube, MOVE_FN, ALL_MOVES,
+  generateScramble,
 } from "../engine/cube.js";
 import { validateCube } from "../engine/validate.js";
 

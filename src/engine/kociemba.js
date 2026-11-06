@@ -11,7 +11,6 @@ const UR=0, UF=1, UL=2, UB=3, DR=4, DF=5, DL=6, DB=7, FR=8, FL=9, BL=10, BR=11;
 
 // ─── Facelet tables ──────────────────────────────────────────────────────────
 const _U=x=>x-1, _R=x=>8+x, _F=x=>17+x, _D=x=>26+x, _L=x=>35+x, _Bx=x=>44+x;
-const centerFacelet = [4,13,22,31,40,49];
 const cornerFacelet = [
   [_U(9),_R(1),_F(3)],[_U(7),_F(1),_L(3)],[_U(1),_L(1),_Bx(3)],[_U(3),_Bx(1),_R(3)],
   [_D(3),_F(9),_R(7)],[_D(1),_L(9),_F(7)],[_D(7),_Bx(9),_L(7)],[_D(9),_R(9),_Bx(7)]
@@ -35,7 +34,6 @@ const edgeColor = [
 // ─── parseAlg (closure over full 18-move map) ────────────────────────────────
 const parseAlg = (() => {
   const nums = {U:0,R:1,F:2,D:3,L:4,B:5,E:6,M:7,S:8,x:9,y:10,z:11,u:12,r:13,f:14,d:15,l:16,b:17};
-  const names = {0:'U',1:'R',2:'F',3:'D',4:'L',5:'B',6:'E',7:'M',8:'S',9:'x',10:'y',11:'z',12:'u',13:'r',14:'f',15:'d',16:'l',17:'b'};
   return function parseAlg(arg) {
     if (typeof arg === 'string') {
       return arg.split(/\s+/).filter(p=>p.length>0).map(part=>{
@@ -51,7 +49,6 @@ const parseAlg = (() => {
       return [arg];
     }
   };
-  void names; // used in Cube.inverse below via the outer closure
 })();
 
 // ─── Cube class ──────────────────────────────────────────────────────────────
