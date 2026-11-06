@@ -3,11 +3,12 @@ import ThreeCubeLazy, { CAMERA_PRESETS } from "./ThreeCubeLazy.jsx";
 import MoveBadge from "./MoveBadge.jsx";
 import NavigationControls from "./NavigationControls.jsx";
 import Celebration from "./Celebration.jsx";
+import TimerStats from "./TimerStats.jsx";
 import { NoWebGL, ProgressRing, formatTime, hasWebGL } from "./ui.jsx";
 
 // The solution screen: live 3D cube, stats + analysis, current-step card,
 // playback transport, and the full move list.
-export default function SolutionPanel({ solution, anim, cameraPreset, setCameraPreset, onCopy, onReset }) {
+export default function SolutionPanel({ solution, anim, cameraPreset, setCameraPreset, onCopy, onReset, sessionStats }) {
   const total = anim.total;
   const cur = solution?.steps?.[anim.step < total ? anim.step : total - 1];
   if (!cur) return null;
@@ -104,6 +105,9 @@ export default function SolutionPanel({ solution, anim, cameraPreset, setCameraP
           </div>
         </div>
       )}
+
+      {/* Session timer stats (Agent D) — tracked across solves, persisted */}
+      {sessionStats && <TimerStats stats={sessionStats} />}
 
       {/* Step card */}
       <div key={anim.animIdx} style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:14,padding:"20px 16px",marginBottom:16,animation:"up .35s ease"}}>
