@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { replayToCube } from "../engine/cube.js";
-import { MOVE_ANIM } from "../components/ThreeCube.jsx";
+import { MOVE_ANIM } from "../components/ThreeCubeLazy.jsx";
+import { loadStored, saveStored } from "./persist.js";
 
 const SPEEDS = {
   slow:   { anim: 0.8, delay: 500 },
@@ -15,7 +16,13 @@ export default function useAnimation({ solution, startCube, cube, phase }) {
   const [pendingStep, setPendingStep] = useState(null);
   const [animTrigger, setAnimTrigger] = useState(null);
   const [playing, setPlaying]       = useState(false);
-  const [playSpeed, setPlaySpeed]   = useState("normal");
+  const [playSpeed, setPlaySpeed]   = useState(() => {
+    const s = loadStored("playSpeed", "normal");
+    return SPEEDS[s] ? s : "normal";
+  });
+
+  // Persist play-speed preference (best-effort, private-mode safe).
+  useEffect(() => { saveStored("playSpeed", playSpeed); }, [playSpeed]);
   const animKeyRef                  = useRef(0);
   const playingRef                  = useRef(false);
 

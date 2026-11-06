@@ -1,12 +1,14 @@
 import { FACE_COLOR, FLABEL, MOVE_DESC } from "../engine/cube.js";
-import ThreeCube, { CAMERA_PRESETS } from "./ThreeCube.jsx";
+import ThreeCubeLazy, { CAMERA_PRESETS } from "./ThreeCubeLazy.jsx";
 import MoveBadge from "./MoveBadge.jsx";
 import NavigationControls from "./NavigationControls.jsx";
+import Celebration from "./Celebration.jsx";
+import TimerStats from "./TimerStats.jsx";
 import { NoWebGL, ProgressRing, formatTime, hasWebGL } from "./ui.jsx";
 
 // The solution screen: live 3D cube, stats + analysis, current-step card,
 // playback transport, and the full move list.
-export default function SolutionPanel({ solution, anim, cameraPreset, setCameraPreset, onCopy, onReset }) {
+export default function SolutionPanel({ solution, anim, cameraPreset, setCameraPreset, onCopy, onReset, sessionStats }) {
   const total = anim.total;
   const cur = solution?.steps?.[anim.step < total ? anim.step : total - 1];
   if (!cur) return null;
@@ -19,6 +21,9 @@ export default function SolutionPanel({ solution, anim, cameraPreset, setCameraP
   return (
     <div style={{width:"100%",maxWidth:520,animation:"up .4s ease"}}>
 
+      {/* Agent C #17 — solve celebration (fires on the rising edge of 100%) */}
+      <Celebration active={pct === 100} />
+
       {/* Live 3D cube */}
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:20,background:"var(--surface-2)",border:"1px solid var(--border)",borderRadius:14,padding:"20px 16px 16px",animation:anim.cubeFlash?"glow .35s ease":"none"}}>
         <div style={{fontSize:11,color:"#444",letterSpacing:1,marginBottom:14,textAlign:"center"}}>
@@ -26,7 +31,7 @@ export default function SolutionPanel({ solution, anim, cameraPreset, setCameraP
           {anim.highlightFace&&<span style={{color:FACE_COLOR[anim.highlightFace]||"var(--accent)",marginLeft:8}}>[ {FLABEL[anim.highlightFace]} FACE ]</span>}
         </div>
         <div style={{width:"100%",maxWidth:320,aspectRatio:"1"}}>
-          {hasWebGL ? <ThreeCube cube={anim.displayCube} width="100%" height="100%" animTrigger={anim.animTrigger} onAnimationDone={anim.handleAnimDone} animDuration={anim.SPEEDS[anim.playSpeed].anim} cameraPreset={cameraPreset}/> : <NoWebGL width="100%" height="100%"/>}
+          {hasWebGL ? <ThreeCubeLazy cube={anim.displayCube} width="100%" height="100%" animTrigger={anim.animTrigger} onAnimationDone={anim.handleAnimDone} animDuration={anim.SPEEDS[anim.playSpeed].anim} cameraPreset={cameraPreset}/> : <NoWebGL width="100%" height="100%"/>}
         </div>
 
         {/* Camera presets */}
@@ -100,6 +105,9 @@ export default function SolutionPanel({ solution, anim, cameraPreset, setCameraP
           </div>
         </div>
       )}
+
+      {/* Session timer stats (Agent D) — tracked across solves, persisted */}
+      {sessionStats && <TimerStats stats={sessionStats} />}
 
       {/* Step card */}
       <div key={anim.animIdx} style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:14,padding:"20px 16px",marginBottom:16,animation:"up .35s ease"}}>
