@@ -2,6 +2,7 @@ import { FACE_COLOR, FLABEL, MOVE_DESC } from "../engine/cube.js";
 import ThreeCubeLazy, { CAMERA_PRESETS } from "./ThreeCubeLazy.jsx";
 import MoveBadge from "./MoveBadge.jsx";
 import NavigationControls from "./NavigationControls.jsx";
+import Celebration from "./Celebration.jsx";
 import { NoWebGL, ProgressRing, formatTime, hasWebGL } from "./ui.jsx";
 
 // The solution screen: live 3D cube, stats + analysis, current-step card,
@@ -18,6 +19,9 @@ export default function SolutionPanel({ solution, anim, cameraPreset, setCameraP
 
   return (
     <div style={{width:"100%",maxWidth:520,animation:"up .4s ease"}}>
+
+      {/* Agent C #17 — solve celebration (fires on the rising edge of 100%) */}
+      <Celebration active={pct === 100} />
 
       {/* Live 3D cube */}
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:20,background:"var(--surface-2)",border:"1px solid var(--border)",borderRadius:14,padding:"20px 16px 16px",animation:anim.cubeFlash?"glow .35s ease":"none"}}>
