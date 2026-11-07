@@ -4,6 +4,7 @@ import {
 import FlatFace from "./FlatFace.jsx";
 import ThreeCubeLazy from "./ThreeCubeLazy.jsx";
 import ScrambleBanner from "./ScrambleBanner.jsx";
+import PatternLibrary from "./PatternLibrary.jsx";
 import { NoWebGL, hasWebGL } from "./ui.jsx";
 
 // The input screen: solver status, paint/3D tabs, algorithm entry,
@@ -118,6 +119,9 @@ export default function InputPanel({ cs, solver, onSolve, onReset }) {
             {cs.algoErr&&<div style={{color:"var(--err)",fontSize:12,marginBottom:6}}>⚠ {cs.algoErr}</div>}
             <div style={{fontFamily:"var(--font-mono)",fontSize:11,color:"#2a2a2a",letterSpacing:1,lineHeight:2,overflowWrap:"break-word"}}>{ALL_MOVES.join("  ")}</div>
           </div>
+
+          {/* Pattern library (collapsible) */}
+          <PatternLibrary cs={cs} />
 
           {/* Validation */}
           {cs.validationErrs.length>0 ? (
