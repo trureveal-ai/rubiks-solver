@@ -7,6 +7,20 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.9.0] — 2026-11-06
+
+Wave 3 of the v2.0 roadmap — features, built as three parallel agents in isolated worktrees with single-owner file scoping (zero merge conflicts).
+
+### Added
+- **Drag-to-rotate** — grab a face on the 3D cube and drag to turn it; snaps to the nearest quarter-turn and applies the move. (Correct move mapping verified; grabbing an outer layer — a corner/edge — works best, center-column grabs are a no-op since the engine has no slice moves.)
+- **Color-blind overlays** — optional color-initial letters on every sticker (toggle in the 3D view controls, persisted); tracks stickers through moves
+- **Pattern library** — 14 classic patterns (Checkerboard, Superflip, Cube-in-a-Cube, …), one-click apply, with lightweight 2D thumbnails (no extra WebGL contexts)
+- **Beginner (LBL) method solver** — a fully-general layer-by-layer solver with six named human stages (White Cross → Permute Last Layer), verified against the engine over 15,000 scrambles; non-optimal by design and labeled as such
+- **CFOP-style annotation** — groups the Kociemba solution into Cross / F2L / OLL / PLL phases with an honest "not a true CFOP solve" disclaimer
+- **Solution method toggle** — `Kociemba | Beginner | CFOP` on the solution screen (default Kociemba view unchanged)
+
+---
+
 ## [1.8.0] — 2026-11-06
 
 Wave 2 of the v2.0 roadmap — core improvements, built as four parallel agents in isolated worktrees and integrated together.

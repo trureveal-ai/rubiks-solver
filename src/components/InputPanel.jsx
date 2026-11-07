@@ -4,6 +4,7 @@ import {
 import FlatFace from "./FlatFace.jsx";
 import ThreeCubeLazy from "./ThreeCubeLazy.jsx";
 import ScrambleBanner from "./ScrambleBanner.jsx";
+import PatternLibrary from "./PatternLibrary.jsx";
 import { NoWebGL, hasWebGL } from "./ui.jsx";
 
 // The input screen: solver status, paint/3D tabs, algorithm entry,
@@ -119,6 +120,9 @@ export default function InputPanel({ cs, solver, onSolve, onReset }) {
             <div style={{fontFamily:"var(--font-mono)",fontSize:11,color:"#2a2a2a",letterSpacing:1,lineHeight:2,overflowWrap:"break-word"}}>{ALL_MOVES.join("  ")}</div>
           </div>
 
+          {/* Pattern library (collapsible) */}
+          <PatternLibrary cs={cs} />
+
           {/* Validation */}
           {cs.validationErrs.length>0 ? (
             <div style={{marginTop:12,background:"var(--err-bg)",border:"1px solid var(--err-border)",borderRadius:10,padding:14}}>
@@ -138,7 +142,7 @@ export default function InputPanel({ cs, solver, onSolve, onReset }) {
         <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
           <div style={{fontSize:12,color:"#444",letterSpacing:1,marginBottom:12}}>DRAG TO ROTATE</div>
           <div style={{marginBottom:24,width:"100%",maxWidth:360,aspectRatio:"1"}}>
-            {hasWebGL ? <ThreeCubeLazy cube={cs.cube} width="100%" height="100%" animTrigger={cs.paintAnimTrigger} onAnimationDone={cs.handlePaintAnimDone} animDuration={0.35}/> : <NoWebGL width="100%" height="100%"/>}
+            {hasWebGL ? <ThreeCubeLazy cube={cs.cube} width="100%" height="100%" animTrigger={cs.paintAnimTrigger} onAnimationDone={cs.handlePaintAnimDone} animDuration={0.35} onMove={cs.doMoveAnimated}/> : <NoWebGL width="100%" height="100%"/>}
           </div>
           <div style={{width:"100%",background:"var(--surface-2)",border:"1px solid var(--border)",borderRadius:10,padding:14}}>
             <div style={{fontSize:11,color:"#555",letterSpacing:1,marginBottom:12,textAlign:"center"}}>INTERACTIVE FACE ROTATIONS</div>
