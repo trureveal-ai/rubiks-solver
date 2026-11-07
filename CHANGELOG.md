@@ -7,6 +7,20 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [2.0.0] — 2026-11-06
+
+Wave 4 of the v2.0 roadmap — the "wow factor" wave, and the v2.0.0 milestone. The full 23-item roadmap (Waves 1–4) is complete.
+
+### Added
+- **Camera color scanning** — scan a physical cube with your webcam: a live feed with a 3×3 grid, capture all six faces, a hue-based color classifier builds and validates the cube, then routes to the Paint tab to review. Graceful fallbacks for denied/absent/unsupported cameras.
+- **Voice-guided solving** — the Web Speech API speaks each move as the solution plays (`R'` → "R prime"); toggle on the solution screen, feature-detected and silent where unsupported.
+- **Race the Solver** — a split-screen mode: the solver auto-plays its solution against a clock while you run a manual timer to beat it.
+
+### Notes
+- Camera color-reading accuracy and audible speech depend on real hardware and should be confirmed on-device; the color classifier and the spoken-move dispatch are verified in isolation.
+
+---
+
 ## [1.9.0] — 2026-11-06
 
 Wave 3 of the v2.0 roadmap — features, built as three parallel agents in isolated worktrees with single-owner file scoping (zero merge conflicts).
