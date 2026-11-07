@@ -5,6 +5,7 @@ import FlatFace from "./FlatFace.jsx";
 import ThreeCubeLazy from "./ThreeCubeLazy.jsx";
 import ScrambleBanner from "./ScrambleBanner.jsx";
 import PatternLibrary from "./PatternLibrary.jsx";
+import CameraScanner from "./CameraScanner.jsx";
 import { NoWebGL, hasWebGL } from "./ui.jsx";
 
 // The input screen: solver status, paint/3D tabs, algorithm entry,
@@ -71,6 +72,7 @@ export default function InputPanel({ cs, solver, onSolve, onReset }) {
       <div style={{display:"flex",background:"var(--surface)",borderRadius:8,border:"1px solid var(--border)",marginBottom:16,padding:4,gap:4}}>
         {tabBtn("✏  PAINT","paint")}
         {tabBtn("⬡  3D + MOVES","3d")}
+        {tabBtn("📷  SCAN","scan")}
       </div>
 
       {/* ── PAINT TAB ── */}
@@ -158,6 +160,11 @@ export default function InputPanel({ cs, solver, onSolve, onReset }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── SCAN TAB ── */}
+      {cs.tab==="scan" && (
+        <CameraScanner cs={cs} />
       )}
 
       {cs.scrambleSeq&&<div style={{marginTop:14}}><ScrambleBanner seq={cs.scrambleSeq}/></div>}
