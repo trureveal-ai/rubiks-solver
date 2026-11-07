@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { FACE_COLOR, FLABEL, MOVE_DESC } from "../engine/cube.js";
 import ThreeCubeLazy, { CAMERA_PRESETS } from "./ThreeCubeLazy.jsx";
 import MoveBadge from "./MoveBadge.jsx";
@@ -7,6 +7,8 @@ import Celebration from "./Celebration.jsx";
 import TimerStats from "./TimerStats.jsx";
 import BeginnerSolution from "./BeginnerSolution.jsx";
 import CfopAnnotation from "./CfopAnnotation.jsx";
+import RaceMode from "./RaceMode.jsx";
+import useVoiceGuide from "../hooks/useVoiceGuide.js";
 import { solveBeginner, scrambleFromSolutionMoves } from "../engine/beginner-solver.js";
 import { cfopAnnotate } from "../engine/cfop-annotate.js";
 import { NoWebGL, ProgressRing, formatTime, hasWebGL } from "./ui.jsx";
@@ -40,7 +42,27 @@ function MethodToggle({ method, setMethod }) {
 // playback transport, and the full move list.
 export default function SolutionPanel({ solution, anim, cameraPreset, setCameraPreset, onCopy, onReset, sessionStats }) {
   const [method, setMethod] = useState("kociemba");
+  const [racing, setRacing] = useState(false);
+  const voice = useVoiceGuide();
+  const { enabled: voiceEnabled, speakMove } = voice;
   const total = anim.total;
+
+  // Speak the current step's move whenever the step actually advances (not on
+  // every re-render). The ref guard ensures a single utterance per step, and
+  // keeps the pointer in sync even while voice is off so toggling on mid-solve
+  // doesn't blurt the current move.
+  const lastSpokenStep = useRef(anim.step);
+  useEffect(() => {
+    if (method !== "kociemba" || !voiceEnabled) {
+      lastSpokenStep.current = anim.step;
+      return;
+    }
+    if (anim.step === lastSpokenStep.current) return;
+    lastSpokenStep.current = anim.step;
+    const idx = anim.step < total ? anim.step : total - 1;
+    const mv = solution?.steps?.[idx]?.move;
+    if (mv) speakMove(mv);
+  }, [anim.step, voiceEnabled, speakMove, method, total, solution]);
 
   // Alternate views are computed lazily — only when their tab is selected.
   const beginnerData = useMemo(() => {
@@ -181,6 +203,34 @@ export default function SolutionPanel({ solution, anim, cameraPreset, setCameraP
 
           <NavigationControls anim={anim} total={total} />
 
+          {/* Voice guide + Race launcher — sits with the playback transport */}
+          <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:18,flexWrap:"wrap",alignItems:"center"}}>
+            <button
+              onClick={voice.toggle}
+              disabled={!voice.supported}
+              aria-pressed={voice.enabled}
+              aria-label={voice.supported ? (voice.enabled ? "Turn off voice guidance" : "Turn on voice guidance") : "Voice guidance not supported in this browser"}
+              title={voice.supported ? "Speak each move aloud during playback" : "Voice guidance not supported in this browser"}
+              style={{
+                padding:"8px 14px", borderRadius:"var(--r-2)", cursor:voice.supported?"pointer":"not-allowed",
+                border:`1px solid ${voice.enabled?"var(--accent)":"var(--border)"}`,
+                background:voice.enabled?"#FFD60018":"transparent",
+                color:!voice.supported?"#2a2a2a":voice.enabled?"var(--accent)":"#555",
+                fontFamily:"var(--font-sans)", fontSize:12, letterSpacing:1, fontWeight:voice.enabled?900:400,
+              }}
+            >{voice.enabled?"🔊 VOICE ON":"🔇 VOICE"}</button>
+            <button
+              onClick={()=>setRacing(true)}
+              aria-label="Race the solver"
+              title="Race the solver — can you beat its time?"
+              style={{
+                padding:"8px 14px", borderRadius:"var(--r-2)", cursor:"pointer",
+                border:"1px solid var(--border-2)", background:"transparent",
+                color:"#888", fontFamily:"var(--font-sans)", fontSize:12, letterSpacing:1, fontWeight:700,
+              }}
+            >⚡ RACE</button>
+          </div>
+
           {/* All moves */}
           <details style={{marginBottom:18}}>
             <summary style={{cursor:"pointer",fontSize:12,color:"#444",letterSpacing:1,padding:"10px 14px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:8,listStyle:"none",WebkitTapHighlightColor:"transparent"}}>▸ VIEW ALL {solution.totalMoves} MOVES</summary>
@@ -199,6 +249,8 @@ export default function SolutionPanel({ solution, anim, cameraPreset, setCameraP
 
       {method === "beginner" && <BeginnerSolution data={beginnerData} />}
       {method === "cfop" && <CfopAnnotation data={cfopData} />}
+
+      {racing && <RaceMode solution={solution} onClose={() => setRacing(false)} />}
 
       <button onClick={onReset} style={{width:"100%",background:"transparent",border:"1px solid var(--border)",borderRadius:8,padding:11,marginTop:method==="kociemba"?0:6,color:"#444",fontFamily:"var(--font-sans)",fontSize:12,letterSpacing:1,cursor:"pointer"}}>◂ START OVER</button>
     </div>
